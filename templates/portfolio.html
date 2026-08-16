@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Security Audit{% endblock %}
+
+{% block content %}
+<div class="container" style="margin-top: 20px;">
+    
+    <!-- Top Bar: Title & Action Button -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <h1 style="margin: 0;">Security Audit & Asset Portfolio</h1>
+            <p style="color: #6b7280; margin: 4px 0 0 0;">Legal verification, property compliance metrics, and portfolio tracking.</p>
+        </div>
+        <button onclick="document.getElementById('auditFormCard').style.display='block'" 
+                style="background-color: #d97706; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+            + Evaluate New Property
+        </button>
+    </div>
+
+    <!-- Hidden Evaluation Form Card (Toggles open when clicking button) -->
+    <div id="auditFormCard" class="card" style="display: none; padding: 20px; margin-bottom: 20px; border-left: 4px solid #d97706;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">Submit Property for Legal & Security Audit</h3>
+            <button onclick="document.getElementById('auditFormCard').style.display='none'" style="background: none; border: none; font-size: 18px; cursor: pointer;">✕</button>
+        </div>
+        <form onsubmit="alert('Property submitted successfully for legal verification audit!'); return false;" style="margin-top: 15px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div>
+                <label style="display: block; font-weight: 500; margin-bottom: 5px;">Location</label>
+                <input type="text" placeholder="e.g. Koramangala" required style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+            </div>
+            <div>
+                <label style="display: block; font-weight: 500; margin-bottom: 5px;">Property Type</label>
+                <input type="text" placeholder="Apartment / Villa" required style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+            </div>
+            <div>
+                <label style="display: block; font-weight: 500; margin-bottom: 5px;">Built-up Area (Sqft)</label>
+                <input type="number" placeholder="1400" required style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+            </div>
+            <div>
+                <label style="display: block; font-weight: 500; margin-bottom: 5px;">Valuation (Lakhs ₹)</label>
+                <input type="number" placeholder="115" required style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+            </div>
+            <div style="grid-column: 1 / -1; margin-top: 5px;">
+                <button type="submit" style="background-color: #d97706; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                    Run Security & Compliance Audit
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Summary Metrics Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div class="card" style="padding: 16px;">
+            <span style="color: #6b7280; font-size: 13px; font-weight: 600; text-transform: uppercase;">Total Properties</span>
+            <h2 style="margin: 8px 0 0 0; font-size: 28px; color: #1e293b;">3</h2>
+        </div>
+        <div class="card" style="padding: 16px;">
+            <span style="color: #6b7280; font-size: 13px; font-weight: 600; text-transform: uppercase;">Total Valuation</span>
+            <h2 style="margin: 8px 0 0 0; font-size: 28px; color: #059669;">₹ 3.85 Cr</h2>
+        </div>
+        <div class="card" style="padding: 16px;">
+            <span style="color: #6b7280; font-size: 13px; font-weight: 600; text-transform: uppercase;">Audit Verification</span>
+            <h2 style="margin: 8px 0 0 0; font-size: 28px; color: #2563eb;">100% Encrypted</h2>
+        </div>
+        <div class="card" style="padding: 16px;">
+            <span style="color: #6b7280; font-size: 13px; font-weight: 600; text-transform: uppercase;">Annual Rental Revenue</span>
+            <h2 style="margin: 8px 0 0 0; font-size: 28px; color: #d97706;">₹ 18.2 L</h2>
+        </div>
+    </div>
+
+    <!-- Verified Audit Table -->
+    <div class="card" style="padding: 20px;">
+        <h3 style="margin-top: 0; margin-bottom: 16px;">Audited Portfolio Listings</h3>
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+                <tr style="border-bottom: 2px solid #e5e7eb; color: #4b5563;">
+                    <th style="padding: 10px;">Location</th>
+                    <th style="padding: 10px;">Type</th>
+                    <th style="padding: 10px;">Sqft</th>
+                    <th style="padding: 10px;">BHK</th>
+                    <th style="padding: 10px;">Year Built</th>
+                    <th style="padding: 10px;">Audit Status</th>
+                    <th style="padding: 10px;">Valuation</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                    <td style="padding: 12px 10px;"><strong>1st Phase JP Nagar</strong></td>
+                    <td style="padding: 12px 10px;">Apartment</td>
+                    <td style="padding: 12px 10px;">1200.0</td>
+                    <td style="padding: 12px 10px;">2</td>
+                    <td style="padding: 12px 10px;">2020</td>
+                    <td style="padding: 12px 10px;"><span style="background-color: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">Verified Cleared</span></td>
+                    <td style="padding: 12px 10px; font-weight: 600;">₹ 95.09 L</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                    <td style="padding: 12px 10px;"><strong>Whitefield</strong></td>
+                    <td style="padding: 12px 10px;">Villa</td>
+                    <td style="padding: 12px 10px;">2400.0</td>
+                    <td style="padding: 12px 10px;">3</td>
+                    <td style="padding: 12px 10px;">2022</td>
+                    <td style="padding: 12px 10px;"><span style="background-color: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">Verified Cleared</span></td>
+                    <td style="padding: 12px 10px; font-weight: 600;">₹ 1.40 Cr</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                    <td style="padding: 12px 10px;"><strong>Indiranagar</strong></td>
+                    <td style="padding: 12px 10px;">Penthouse</td>
+                    <td style="padding: 12px 10px;">1800.0</td>
+                    <td style="padding: 12px 10px;">3</td>
+                    <td style="padding: 12px 10px;">2023</td>
+                    <td style="padding: 12px 10px;"><span style="background-color: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">Pending Title Check</span></td>
+                    <td style="padding: 12px 10px; font-weight: 600;">₹ 1.50 Cr</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+{% endblock %}

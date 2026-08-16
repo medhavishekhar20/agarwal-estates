@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Compare Localities{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Compare Localities</h1>
+  <p class="subtitle">See average price, price per sq ft, and listing count for two localities, side by side.</p>
+  <form method="POST">
+    <div class="two-col">
+      <div>
+        <label>Locality 1</label>
+        <select name="location1" required>
+          {% for loc in locations %}<option value="{{ loc }}">{{ loc }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Locality 2</label>
+        <select name="location2" required>
+          {% for loc in locations %}<option value="{{ loc }}">{{ loc }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <button type="submit">Compare</button>
+  </form>
+
+  {% if result %}
+  <table style="margin-top:20px;">
+    <tr><th>Metric</th><th>{{ result.loc1.location }}</th><th>{{ result.loc2.location }}</th></tr>
+    <tr><td>Average price</td><td>₹{{ result.loc1.avg_price_lakhs }}L</td><td>₹{{ result.loc2.avg_price_lakhs }}L</td></tr>
+    <tr><td>Average price / sq ft</td><td>₹{{ result.loc1.avg_price_per_sqft }}</td><td>₹{{ result.loc2.avg_price_per_sqft }}</td></tr>
+    <tr><td>Average size</td><td>{{ result.loc1.avg_sqft }} sq ft</td><td>{{ result.loc2.avg_sqft }} sq ft</td></tr>
+    <tr><td>Listings in dataset</td><td>{{ result.loc1.listings }}</td><td>{{ result.loc2.listings }}</td></tr>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="card auth-card">
+    <h1>Welcome back</h1>
+    <p class="subtitle">Bengaluru Real Estate Decision Support System</p>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+    <form method="POST">
+      <label>Email</label>
+      <input type="email" name="email" required>
+      <label>Password</label>
+      <input type="password" name="password" required>
+      <button type="submit" style="width:100%">Log in</button>
+    </form>
+    <div class="auth-link">Don't have an account? <a href="{{ url_for('register') }}">Register</a></div>
+    <div class="auth-link" style="color:#6b7280; font-size:12px; margin-top:10px;">
+      Demo admin: admin@agarwal.demo / admin123
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Model Accuracy{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Model Accuracy Dashboard <span style="font-size:12px; background:var(--primary-light); color:var(--primary); padding:3px 8px; border-radius:6px;">Admin only</span></h1>
+  <p class="subtitle">Live evaluation metrics for the trained price prediction model.</p>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="num">{{ meta.metrics.selected }}</div>
+      <div class="label">Model in use</div>
+    </div>
+    <div class="stat-card">
+      <div class="num">{{ meta.rows_used_for_training }}</div>
+      <div class="label">Rows used for training (of {{ meta.rows_raw }} raw)</div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:24px;">Linear Regression</h2>
+  <table>
+    <tr><th>R² Score</th><th>MAE (₹ Lakhs)</th><th>RMSE (₹ Lakhs)</th></tr>
+    <tr>
+      <td class="{{ 'badge-good' if meta.metrics.linear_regression.r2 >= 0.8 else 'badge-warn' }}">{{ meta.metrics.linear_regression.r2 }}</td>
+      <td>{{ meta.metrics.linear_regression.mae }}</td>
+      <td>{{ meta.metrics.linear_regression.rmse }}</td>
+    </tr>
+  </table>
+
+  <h2 style="margin-top:20px;">Random Forest</h2>
+  <table>
+    <tr><th>R² Score</th><th>MAE (₹ Lakhs)</th><th>RMSE (₹ Lakhs)</th></tr>
+    <tr>
+      <td class="{{ 'badge-good' if meta.metrics.random_forest.r2 >= 0.8 else 'badge-warn' }}">{{ meta.metrics.random_forest.r2 }}</td>
+      <td>{{ meta.metrics.random_forest.mae }}</td>
+      <td>{{ meta.metrics.random_forest.rmse }}</td>
+    </tr>
+  </table>
+
+  <p class="subtitle" style="margin-top:20px;">
+    R² shows how much of the price variation the model explains (closer to 1 is better).
+    MAE and RMSE show the average prediction error in lakhs (lower is better). The system automatically
+    uses whichever model scored higher on R² during training.
+  </p>
+</div>
+{% endblock %}

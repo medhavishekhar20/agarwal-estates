@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="margin-top: 30px; font-family: 'Segoe UI', Arial, sans-serif;">
+    <div class="card" style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid #34495e;">
+        <h2>NRI Investment Desk</h2>
+        <p style="color: #7f8c8d;">Complete compliance orchestration and management portal for cross-border investments.</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+        <!-- 1. Tax Compliance Section -->
+        <div style="margin-bottom: 30px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+            <h4 style="color: #2c3e50; margin-top: 0;">1. Tax Compliance (Section 195 TDS)</h4>
+            <form method="POST" action="/nri-desk">
+                <input type="hidden" name="funds_type" value="{{ funds_type }}">
+                <input type="hidden" name="mgmt_package" value="{{ mgmt_package }}">
+                <label style="display:block; margin-bottom: 8px; font-size: 14px; color: #555;">Property Value (in Lakhs ₹):</label>
+                <input type="number" name="property_value" value="{{ property_value }}" placeholder="e.g. 85" style="padding: 8px; width: 200px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
+                <button type="submit" name="action" value="calculate_tax" style="background: #1e4620; color: white; border: none; padding: 9px 15px; border-radius: 4px; cursor: pointer;">Calculate Tax</button>
+            </form>
+            {% if tds_result %}
+                <div style="margin-top: 15px; padding: 10px; background: #e8f5e9; color: #2e7d32; border-radius: 4px; font-size: 15px;">
+                    <strong>Estimated Section 195 TDS Withholding:</strong> ₹ {{ tds_result }} Lakhs (Computed at standard 20% rate)
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 2. Repatriation Rules Section -->
+        <div style="margin-bottom: 30px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+            <h4 style="color: #2c3e50; margin-top: 0;">2. FEMA Repatriation Rules Checker</h4>
+            <form method="POST" action="/nri-desk">
+                <input type="hidden" name="property_value" value="{{ property_value }}">
+                <input type="hidden" name="mgmt_package" value="{{ mgmt_package }}">
+                <label style="display:block; margin-bottom: 8px; font-size: 14px; color: #555;">Select Funds Type for Outward Remittance:</label>
+                <select name="funds_type" style="padding: 8px; width: 220px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
+                    <option value="sale_proceeds" {% if funds_type == 'sale_proceeds' %}selected{% endif %}>Property Sale Proceeds</option>
+                    <option value="rental_income" {% if funds_type == 'rental_income' %}selected{% endif %}>Rental Income</option>
+                </select>
+                <button type="submit" name="action" value="check_fema" style="background: #2980b9; color: white; border: none; padding: 9px 15px; border-radius: 4px; cursor: pointer;">Check Limits</button>
+            </form>
+            {% if fema_result %}
+                <div style="margin-top: 15px; padding: 10px; background: #e3f2fd; color: #1565c0; border-radius: 4px; font-size: 15px;">
+                    <strong>FEMA Regulation:</strong> {{ fema_result }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 3. Property Management Section -->
+        <div style="padding: 15px; background: #f9f9f9; border-radius: 8px;">
+            <h4 style="color: #2c3e50; margin-top: 0;">3. Property Management Service Assignment</h4>
+            <form method="POST" action="/nri-desk">
+                <input type="hidden" name="property_value" value="{{ property_value }}">
+                <input type="hidden" name="funds_type" value="{{ funds_type }}">
+                <label style="display:block; margin-bottom: 8px; font-size: 14px; color: #555;">Assign Caretaker Service Package:</label>
+                <select name="mgmt_package" style="padding: 8px; width: 220px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
+                    <option value="tenant" {% if mgmt_package == 'tenant' %}selected{% endif %}>Tenant Sourcing & Rent Collection</option>
+                    <option value="maintenance" {% if mgmt_package == 'maintenance' %}selected{% endif %}>Routine Maintenance & Guarding</option>
+                </select>
+                <button type="submit" name="action" value="assign_mgmt" style="background: #d35400; color: white; border: none; padding: 9px 15px; border-radius: 4px; cursor: pointer;">Assign Package</button>
+            </form>
+            {% if mgmt_result %}
+                <div style="margin-top: 15px; padding: 10px; background: #fff3e0; color: #e65100; border-radius: 4px; font-size: 15px;">
+                    <strong>Service Order Confirmed:</strong> {{ mgmt_result }}
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

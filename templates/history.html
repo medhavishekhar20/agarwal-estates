@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Prediction History</h1>
+  <p class="subtitle">{{ 'All predictions made by every user (admin view)' if session.get('role')=='admin' else 'Your past price predictions' }}</p>
+  {% if rows %}
+  <table>
+    <tr>
+      {% if session.get('role')=='admin' %}<th>User</th>{% endif %}
+      <th>Location</th><th>BHK</th><th>Sq Ft</th><th>Bath</th><th>Predicted Price</th><th>Date</th>
+    </tr>
+    {% for r in rows %}
+    <tr>
+      {% if session.get('role')=='admin' %}<td>{{ r.user_name }}</td>{% endif %}
+      <td>{{ r.location }}</td><td>{{ r.bhk }}</td><td>{{ r.total_sqft }}</td><td>{{ r.bath }}</td>
+      <td>₹{{ r.predicted_price }}L</td><td>{{ r.created_at }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p>No predictions yet. <a href="{{ url_for('predict') }}">Run your first prediction</a>.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Bengaluru Real Estate Decision Support System{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  {% if session.get('user_id') %}
+  <div class="topbar">
+    <div class="brand">Bengaluru Real Estate Decision Support System <span>for Agarwal Estates</span></div>
+    <div class="user-info">
+      <span class="role-badge">{{ session.get('role') }}</span>
+      <span>{{ session.get('name') }}</span>
+      <a href="{{ url_for('logout') }}">Log out</a>
+    </div>
+  </div>
+  <div class="tabs">
+    <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint=='dashboard' }}">Dashboard</a>
+    <a href="{{ url_for('predict') }}" class="{{ 'active' if request.endpoint=='predict' }}">Price Prediction</a>
+    <a href="{{ url_for('compare') }}" class="{{ 'active' if request.endpoint=='compare' }}">Compare Localities</a>
+    <a href="{{ url_for('emi') }}" class="{{ 'active' if request.endpoint=='emi' }}">EMI Calculator</a>
+    <a href="{{ url_for('tax') }}" class="{{ 'active' if request.endpoint=='tax' }}">Taxation &amp; Stamp Duty</a>
+    <a href="{{ url_for('history') }}" class="{{ 'active' if request.endpoint=='history' }}">History</a>
+    {% if session.get('role') == 'admin' %}
+    <a href="{{ url_for('metrics') }}" class="{{ 'active' if request.endpoint=='metrics' }}">Model Accuracy</a>
+    {% endif %}
+    <a href="{{ url_for('profile') }}" class="{{ 'active' if request.endpoint=='profile' }}">Profile</a>
+  </div>
+  {% endif %}
+
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

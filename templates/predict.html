@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Price Prediction{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Price Prediction</h1>
+  <p class="subtitle">Enter property details to get a fair market price estimate, trained on 10,000+ real Bengaluru property sales.</p>
+  <form method="POST">
+    <div class="two-col">
+      <div>
+        <label>Location</label>
+        <select name="location" required>
+          {% for loc in locations %}<option value="{{ loc }}" {{ 'selected' if result and result.location==loc }}>{{ loc }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>BHK</label>
+        <input type="number" name="bhk" min="1" max="10" value="{{ result.bhk if result else 2 }}" required>
+      </div>
+      <div>
+        <label>Total area (sq ft)</label>
+        <input type="number" name="total_sqft" min="150" value="{{ result.total_sqft if result else 1200 }}" required>
+      </div>
+      <div>
+        <label>Bathrooms</label>
+        <input type="number" name="bath" min="1" max="10" value="{{ result.bath if result else 2 }}" required>
+      </div>
+    </div>
+    <button type="submit">Predict Price</button>
+  </form>
+
+  {% if result %}
+  <div class="result-box">
+    <div class="result-price">₹{{ result.price }} Lakhs</div>
+    <div class="result-range">Likely range: ₹{{ result.low }}L – ₹{{ result.high }}L (based on model's average error margin)</div>
+    <p style="margin-top:10px; font-size:14px; color:var(--text-muted);">
+      {{ result.bhk }} BHK · {{ result.total_sqft }} sq ft · {{ result.bath }} bath(s) in {{ result.location }}
+    </p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
