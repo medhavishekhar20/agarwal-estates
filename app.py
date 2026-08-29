@@ -17,8 +17,9 @@ from database import get_db, init_db
 app = Flask(__name__)
 app.secret_key = "college-project-demo-secret-key-change-in-production"
 
-# Initialize database tables on server startup
-init_db()
+# Initialize database tables on server startup within application context
+with app.app_context():
+    init_db()
 
 # ---------- Load the trained model + metadata once at startup ----------
 with open("model.pkl", "rb") as f:
