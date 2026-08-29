@@ -17,6 +17,9 @@ from database import get_db, init_db
 app = Flask(__name__)
 app.secret_key = "college-project-demo-secret-key-change-in-production"
 
+# Initialize database tables on server startup
+init_db()
+
 # ---------- Load the trained model + metadata once at startup ----------
 with open("model.pkl", "rb") as f:
     MODEL = pickle.load(f)
@@ -309,5 +312,4 @@ def metrics():
 
 
 if __name__ == "__main__":
-    init_db()
     app.run(debug=True, host="0.0.0.0", port=5000)
