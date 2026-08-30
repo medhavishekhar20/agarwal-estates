@@ -106,7 +106,7 @@ def register():
         name = request.form["name"].strip()
         email = request.form["email"].strip().lower()
         password = request.form["password"]
-        role = request.form["role"]
+        role = request.form.get("role", "user")
 
         if role not in ("employee", "user"):
             role = "user"  # admin accounts are never self-registered
@@ -184,18 +184,19 @@ def dashboard():
 
 # ---------- Price Prediction ----------
 @app.route("/predict", methods=["GET", "POST"])
+@app.route("/price_predict", methods=["GET", "POST"])
 @login_required()
 def predict():
     result = None
     if request.method == "POST":
         location = request.form["location"]
         bhk = int(request.form["bhk"])
-        total_sqft = float(request.form["total_sqft"])
-        bath = int(request.form["bath"])
+        total_sqft = float(request.form.get("total_sqft") or request.form.get("sqft") or 0)
+        bath = int(request.form.get("bath") or 1)
 
         price = predict_price(location, bhk, total_sqft, bath)
         margin = META["metrics"][
-            "random_forest" if META["model_name"] == "Random Forest" else "linear_regression"
+            "random_forest" if META.get("model_name") == "Random Forest" else "linear_regression"
         ]["mae"]
         result = {
             "location": location, "bhk": bhk, "total_sqft": total_sqft, "bath": bath,
@@ -210,7 +211,7 @@ def predict():
         db.commit()
         db.close()
 
-    return render_template("predict.html", locations=LOCATIONS, result=result)
+    return render_template("price_predict.html" if request.path == "/price_predict" else "predict.html", locations=LOCATIONS, result=result)
 
 
 # ---------- EMI Calculator ----------
@@ -219,7 +220,8 @@ def predict():
 def emi():
     result = None
     if request.method == "POST":
-        principal = float(request.form["principal"]) * 100000  # lakhs -> rupees
+        principal_raw = float(request.form.get("principal") or request.form.get("amount") or 0)
+        principal = principal_raw * 100000 if "principal" in request.form else principal_raw
         rate = float(request.form["rate"])
         tenure = float(request.form["tenure"])
         emi_amount = calculate_emi(principal, rate, tenure)
@@ -252,10 +254,39 @@ def tax():
 def compare():
     result = None
     if request.method == "POST":
-        loc1 = request.form["location1"]
-        loc2 = request.form["location2"]
+        loc1 = request.form.get("location1") or request.form.get("locality1")
+        loc2 = request.form.get("location2") or request.form.get("locality2")
         result = {"loc1": LOCALITY_STATS.get(loc1), "loc2": LOCALITY_STATS.get(loc2)}
     return render_template("compare.html", locations=LOCATIONS, result=result)
+
+
+# ---------- Additional Template Views ----------
+@app.route("/nri_desk", methods=["GET", "POST"])
+@login_required()
+def nri_desk():
+    if request.method == "POST":
+        flash("Thank you! Your inquiry has been received. Our team will contact you shortly.")
+        return redirect(url_for("nri_desk"))
+    return render_template("nri_desk.html")
+
+
+@app.route("/portfolio")
+@login_required()
+def portfolio():
+    summary = {"total_value": "0", "total_properties": 0, "avg_yield": "0.0"}
+    return render_template("portfolio.html", summary=summary, properties=[])
+
+
+@app.route("/audit_logs")
+@login_required()
+def audit_logs():
+    return render_template("audit_logs.html", logs=[])
+
+
+@app.route("/dataset_management")
+@login_required()
+def dataset_management():
+    return render_template("dataset_management.html")
 
 
 # ---------- History ----------
