@@ -1,1 +1,72 @@
+{% extends "base.html" %}
 
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Property Portfolio</h2>
+        <button class="btn btn-outline-primary btn-sm">+ Add Asset</button>
+    </div>
+    <p class="text-muted">Track your real estate investments, estimated valuations, and rental yields.</p>
+    <hr>
+
+    <!-- Portfolio Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm border-0 bg-light text-center">
+                <span class="text-muted small">Total Estimated Value</span>
+                <h3 class="fw-bold text-dark mt-1">₹{{ summary.total_value or '0' }}</h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm border-0 bg-light text-center">
+                <span class="text-muted small">Properties Saved</span>
+                <h3 class="fw-bold text-primary mt-1">{{ summary.total_properties or '0' }}</h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm border-0 bg-light text-center">
+                <span class="text-muted small">Avg. Annual Rental Yield</span>
+                <h3 class="fw-bold text-success mt-1">{{ summary.avg_yield or '0.0' }}%</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Properties Table -->
+    <div class="card shadow-sm p-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Property / Locality</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Purchase Price</th>
+                        <th scope="col">Current Value</th>
+                        <th scope="col">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if properties %}
+                        {% for property in properties %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td><strong>{{ property.title }}</strong><br><small class="text-muted">{{ property.location }}</small></td>
+                            <td>{{ property.type }}</td>
+                            <td>₹{{ property.purchase_price }}</td>
+                            <td class="text-success fw-bold">₹{{ property.current_value }}</td>
+                            <td><span class="badge bg-success">{{ property.status or 'Active' }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                <em>No property holdings found in your portfolio.</em>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
