@@ -1,1 +1,22 @@
+{% extends "base.html" %}
 
+{% block content %}
+<div class="container mt-4">
+    <h2>Dashboard</h2>
+    <p class="text-muted">Welcome to your property analytics hub.</p>
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm text-center">
+                <h5>Recent Valuations</h5>
+                <p class="display-6">0</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm text-center">
+                <h5>Saved Listings</h5>
+                <p class="display-6">0</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
