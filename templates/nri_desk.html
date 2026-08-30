@@ -1,1 +1,71 @@
+{% extends "base.html" %}
 
+{% block content %}
+<div class="container mt-4">
+    <div class="p-5 mb-4 bg-dark text-white rounded-3 shadow-sm">
+        <div class="container-fluid py-3">
+            <h1 class="display-5 fw-bold">NRI Real Estate Services</h1>
+            <p class="col-md-10 fs-5">Seamless property acquisition, legal assistance, portfolio management, and tax advisory for Non-Resident Indians.</p>
+            <a href="#nri-inquiry" class="btn btn-primary btn-lg mt-2">Request Advisory</a>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h5 class="card-title text-primary fw-bold">Legal & FEMA Guidance</h5>
+                    <p class="card-text text-muted">Complete compliance assistance under RBI and FEMA guidelines for property purchase, sale, and funds repatriation.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h5 class="card-title text-primary fw-bold">Property Management</h5>
+                    <p class="card-text text-muted">End-to-end management services including tenant onboarding, rental collection, and property maintenance while you are abroad.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h5 class="card-title text-primary fw-bold">Investment Consultation</h5>
+                    <p class="card-text text-muted">Data-backed real estate valuation and ROI analysis to ensure high returns across prime Indian residential hubs.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm p-4 mb-5" id="nri-inquiry">
+        <h3 class="mb-3">Get in Touch with an NRI Specialist</h3>
+        <form method="POST" action="/nri_desk">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label font-weight-bold">Full Name</label>
+                    <input type="text" name="fullname" class="form-control" placeholder="John Doe" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-weight-bold">Email Address</label>
+                    <input type="email" name="email" class="form-control" placeholder="name@example.com" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-weight-bold">Country of Residence</label>
+                    <input type="text" name="country" class="form-control" placeholder="e.g. USA, UAE, UK" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-weight-bold">Phone / WhatsApp Number</label>
+                    <input type="tel" name="phone" class="form-control" placeholder="+1 234 567 890" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label font-weight-bold">Inquiry Details</label>
+                    <textarea name="message" class="form-control" rows="4" placeholder="Tell us about your property interests or management requirements..."></textarea>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-success btn-lg">Submit Request</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
