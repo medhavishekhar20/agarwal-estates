@@ -1,25 +1,44 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-5">
+<div class="container my-5">
     <div class="row justify-content-center">
-        <div class="col-md-5">
-            <h3 class="text-center mb-4">Create Account</h3>
-            <form method="POST" action="/register">
-                <div class="mb-3">
-                    <label class="form-label">Full Name</label>
-                    <input type="text" name="name" class="form-control" required>
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow border-0 rounded-4">
+                <div class="card-body p-4 p-sm-5">
+                    
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold text-dark">Create Account</h2>
+                        <p class="text-muted small">Join Agarwal Estates to manage & explore properties</p>
+                    </div>
+
+                    <form method="POST" action="/register">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-secondary">Full Name</label>
+                            <input type="text" name="name" class="form-control form-control-lg fs-6" placeholder="e.g. John Doe" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-secondary">Username</label>
+                            <input type="text" name="username" class="form-control form-control-lg fs-6" placeholder="Choose a username" required>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold text-secondary">Password</label>
+                            <input type="password" name="password" class="form-control form-control-lg fs-6" placeholder="Create a password" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm">
+                            Register
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <small class="text-muted">Already have an account? <a href="/login" class="text-success fw-bold text-decoration-none">Sign In</a></small>
+                    </div>
+
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Username</label>
-                    <input type="text" name="username" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Password</label>
-                    <input type="password" name="password" class="form-control" required>
-                </div>
-                <button type="submit" class="btn btn-success w-100">Register</button>
-            </form>
+            </div>
         </div>
     </div>
 </div>
