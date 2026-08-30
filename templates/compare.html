@@ -1,1 +1,60 @@
+{% extends "base.html" %}
 
+{% block content %}
+<div class="container mt-4">
+    <h2>Property & Locality Comparison</h2>
+    <p class="text-muted">Compare real estate options side-by-side to make informed decisions.</p>
+    <hr>
+
+    <div class="card p-4 shadow-sm mb-4">
+        <form method="POST" action="/compare">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label font-weight-bold">Property / Locality A</label>
+                    <input type="text" name="locality1" class="form-control" placeholder="e.g. Whitefield" required>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label font-weight-bold">Property / Locality B</label>
+                    <input type="text" name="locality2" class="form-control" placeholder="e.g. Indiranagar" required>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Compare</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    {% if comparison_data %}
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-primary mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">{{ comparison_data.locality1.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Avg. Price / Sqft:</strong> ₹{{ comparison_data.locality1.avg_price }}</p>
+                    <p><strong>Price Range:</strong> {{ comparison_data.locality1.price_range }}</p>
+                    <p><strong>Growth Potential:</strong> {{ comparison_data.locality1.growth }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm border-success mb-3">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">{{ comparison_data.locality2.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Avg. Price / Sqft:</strong> ₹{{ comparison_data.locality2.avg_price }}</p>
+                    <p><strong>Price Range:</strong> {{ comparison_data.locality2.price_range }}</p>
+                    <p><strong>Growth Potential:</strong> {{ comparison_data.locality2.growth }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-light border text-center py-4">
+        Select two localities above to start the comparison.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
