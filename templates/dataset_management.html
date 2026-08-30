@@ -1,23 +1,31 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-3">
     <h2>Dataset Management (Admin Only)</h2>
-    <p class="text-muted">Upload real estate dataset CSV files to retrain property prediction models.</p>
-    <hr>
-
+    <p class="text-muted">Upload CSV datasets to inspect uploaded rows, columns, and property entries.</p>
+    
     {% if message %}
-        <div class="alert alert-success">{{ message }}</div>
+        <div class="alert alert-info fw-bold">{{ message }}</div>
     {% endif %}
 
-    <div class="card p-4 shadow-sm mt-3">
+    <div class="card p-4 shadow-sm mb-4">
         <form method="POST" action="/dataset_management" enctype="multipart/form-data">
             <div class="mb-3">
                 <label class="form-label fw-bold">Select Dataset CSV File</label>
                 <input type="file" name="dataset_file" class="form-control" accept=".csv" required>
             </div>
-            <button type="submit" class="btn btn-warning fw-bold">Upload & Train Model</button>
+            <button type="submit" class="btn btn-warning fw-bold">Upload & View Data</button>
         </form>
     </div>
+
+    {% if tables %}
+        <div class="card p-3 shadow-lg bg-dark text-white">
+            <h4 class="fw-bold mb-3">Dataset Preview Grid</h4>
+            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                {{ tables|safe }}
+            </div>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}
