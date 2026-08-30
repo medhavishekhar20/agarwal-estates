@@ -1,1 +1,74 @@
+{% extends "base.html" %}
 
+{% block content %}
+<div class="container mt-4">
+    <h2>Home Loan EMI Calculator</h2>
+    <p class="text-muted">Calculate your estimated monthly payment and loan interest.</p>
+    <hr>
+
+    <div class="row mt-4">
+        <div class="col-md-6 mb-4">
+            <div class="card p-4 shadow-sm">
+                <form id="emiForm">
+                    <div class="mb-3">
+                        <label class="form-label font-weight-bold">Loan Amount (₹)</label>
+                        <input type="number" id="amount" class="form-control" placeholder="e.g. 5000000" value="5000000" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label font-weight-bold">Interest Rate (% p.a.)</label>
+                        <input type="number" step="0.1" id="rate" class="form-control" placeholder="e.g. 8.5" value="8.5" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label font-weight-bold">Tenure (Years)</label>
+                        <input type="number" id="tenure" class="form-control" placeholder="e.g. 20" value="20" required>
+                    </div>
+                    <button type="button" onclick="calculateEMI()" class="btn btn-primary w-100">Calculate EMI</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card p-4 shadow-sm bg-light text-center h-100 d-flex justify-content-center">
+                <h4 class="text-muted mb-3">Monthly Payment</h4>
+                <h1 class="display-5 text-success fw-bold" id="emiResult">₹0</h1>
+                <hr>
+                <div class="row text-start mt-2">
+                    <div class="col-6">
+                        <p class="mb-1 text-muted">Principal Amount:</p>
+                        <h6 id="principalDisp">₹0</h6>
+                    </div>
+                    <div class="col-6">
+                        <p class="mb-1 text-muted">Total Interest:</p>
+                        <h6 id="interestDisp">₹0</h6>
+                    </div>
+                    <div class="col-12 mt-2">
+                        <p class="mb-1 text-muted">Total Payment:</p>
+                        <h5 id="totalDisp" class="fw-bold">₹0</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function calculateEMI() {
+    let p = parseFloat(document.getElementById('amount').value);
+    let r = parseFloat(document.getElementById('rate').value) / 12 / 100;
+    let n = parseFloat(document.getElementById('tenure').value) * 12;
+
+    if (p > 0 && r > 0 && n > 0) {
+        let emi = (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+        let totalPayment = emi * n;
+        let totalInterest = totalPayment - p;
+
+        document.getElementById('emiResult').innerText = '₹' + Math.round(emi).toLocaleString('en-IN');
+        document.getElementById('principalDisp').innerText = '₹' + p.toLocaleString('en-IN');
+        document.getElementById('interestDisp').innerText = '₹' + Math.round(totalInterest).toLocaleString('en-IN');
+        document.getElementById('totalDisp').innerText = '₹' + Math.round(totalPayment).toLocaleString('en-IN');
+    }
+}
+// Initial calculation on load
+window.onload = calculateEMI;
+</script>
+{% endblock %}
