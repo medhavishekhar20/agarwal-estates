@@ -2,59 +2,71 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>Property & Locality Comparison</h2>
-    <p class="text-muted">Compare real estate options side-by-side to make informed decisions.</p>
-    <hr>
-
-    <div class="card p-4 shadow-sm mb-4">
+    <div class="card p-4 shadow-lg mb-4">
+        <h3 class="fw-bold mb-3 text-center">Compare Real Estate Localities</h3>
+        <p class="text-muted text-center mb-4">Select two localities to analyze market rates, price trends, and livability scores side-by-side.</p>
+        
         <form method="POST" action="/compare">
             <div class="row g-3">
                 <div class="col-md-5">
-                    <label class="form-label font-weight-bold">Property / Locality A</label>
+                    <label class="form-label fw-bold">First Locality</label>
                     <input type="text" name="locality1" class="form-control" placeholder="e.g. Whitefield" required>
                 </div>
+                <div class="col-md-2 d-flex align-items-end justify-content-center">
+                    <span class="fw-bold fs-5 text-success mb-2">VS</span>
+                </div>
                 <div class="col-md-5">
-                    <label class="form-label font-weight-bold">Property / Locality B</label>
+                    <label class="form-label fw-bold">Second Locality</label>
                     <input type="text" name="locality2" class="form-control" placeholder="e.g. Indiranagar" required>
                 </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">Compare</button>
-                </div>
             </div>
+            <button type="submit" class="btn btn-success w-100 fw-bold mt-4 py-2">Compare Localities</button>
         </form>
     </div>
 
     {% if comparison_data %}
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <div class="card shadow-sm border-primary mb-3">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0">{{ comparison_data.locality1.name }}</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Avg. Price / Sqft:</strong> ₹{{ comparison_data.locality1.avg_price }}</p>
-                    <p><strong>Price Range:</strong> {{ comparison_data.locality1.price_range }}</p>
-                    <p><strong>Growth Potential:</strong> {{ comparison_data.locality1.growth }}</p>
-                </div>
+        <div class="card p-4 shadow-lg bg-dark text-white">
+            <h4 class="fw-bold text-center mb-4 text-success">Side-by-Side Market Comparison</h4>
+            
+            <div class="table-responsive">
+                <table class="table table-dark table-bordered align-middle text-center">
+                    <thead>
+                        <tr class="table-success text-dark">
+                            <th>Metric</th>
+                            <th class="fs-5">{{ comparison_data.locality1.name }}</th>
+                            <th class="fs-5">{{ comparison_data.locality2.name }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fw-bold">Avg. Price / sqft</td>
+                            <td class="text-warning fw-bold">{{ comparison_data.locality1.avg_price }}</td>
+                            <td class="text-warning fw-bold">{{ comparison_data.locality2.avg_price }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Price Range</td>
+                            <td>{{ comparison_data.locality1.price_range }}</td>
+                            <td>{{ comparison_data.locality2.price_range }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Annual Price Growth</td>
+                            <td class="text-success">{{ comparison_data.locality1.growth }}</td>
+                            <td class="text-success">{{ comparison_data.locality2.growth }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Public Transport & Connectivity</td>
+                            <td>{{ comparison_data.locality1.connectivity }}</td>
+                            <td>{{ comparison_data.locality2.connectivity }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Livability Score</td>
+                            <td class="fw-bold text-info">{{ comparison_data.locality1.livability }}</td>
+                            <td class="fw-bold text-info">{{ comparison_data.locality2.livability }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card shadow-sm border-success mb-3">
-                <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0">{{ comparison_data.locality2.name }}</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Avg. Price / Sqft:</strong> ₹{{ comparison_data.locality2.avg_price }}</p>
-                    <p><strong>Price Range:</strong> {{ comparison_data.locality2.price_range }}</p>
-                    <p><strong>Growth Potential:</strong> {{ comparison_data.locality2.growth }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% else %}
-    <div class="alert alert-light border text-center py-4">
-        Select two localities above to start the comparison.
-    </div>
     {% endif %}
 </div>
 {% endblock %}
