@@ -5,6 +5,14 @@
     <div class="col-md-4">
         <div class="card shadow-lg p-4">
             <h3 class="text-center fw-bold mb-3">Sign In</h3>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ category }} p-2 small">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
             
             <form method="POST" action="/login">
                 <div class="mb-3">
@@ -17,18 +25,31 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label font-weight-bold">Select Role</label>
-                    <select name="role" class="form-select">
+                    <select name="role" id="roleSelect" class="form-select" onchange="toggleAdminPin()">
                         <option value="user">User</option>
                         <option value="admin">Admin</option>
                         <option value="buyer">Buyer</option>
                     </select>
                 </div>
+                <div class="mb-3 d-none" id="adminPinBox">
+                    <label class="form-label font-weight-bold text-danger">Admin Security PIN</label>
+                    <input type="password" name="admin_pin" class="form-control" placeholder="Enter PIN (Default: 1234)">
+                </div>
                 <button type="submit" class="btn btn-success w-100 fw-bold py-2 mt-2">Sign In</button>
             </form>
-            <div class="text-center mt-3">
-                <small class="text-muted">Don't have an account? <a href="/register" class="text-success fw-bold">Register here</a></small>
-            </div>
         </div>
     </div>
 </div>
+
+<script>
+function toggleAdminPin() {
+    var role = document.getElementById('roleSelect').value;
+    var pinBox = document.getElementById('adminPinBox');
+    if (role === 'admin') {
+        pinBox.classList.remove('d-none');
+    } else {
+        pinBox.classList.add('d-none');
+    }
+}
+</script>
 {% endblock %}
