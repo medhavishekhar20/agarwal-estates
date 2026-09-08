@@ -1,41 +1,62 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row justify-content-center mt-4">
-    <div class="col-md-6">
-        <div class="card p-4 shadow-lg">
-            <h3 class="fw-bold mb-3 text-center">Property Price Predictor</h3>
-            
-            <form method="POST" action="/price_predict">
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Locality / Area</label>
-                    <input type="text" name="location" class="form-control" placeholder="e.g. Whitefield" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Total Square Feet</label>
-                    <input type="number" name="sqft" class="form-control" placeholder="e.g. 1200" required>
-                </div>
-                <div class="row">
-                    <div class="col-6 mb-3">
-                        <label class="form-label fw-bold">BHK</label>
-                        <input type="number" name="bhk" class="form-control" placeholder="2" required>
-                    </div>
-                    <div class="col-6 mb-3">
-                        <label class="form-label fw-bold">Bathrooms</label>
-                        <input type="number" name="bathrooms" class="form-control" placeholder="2" required>
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary w-100 fw-bold py-2">Predict Price</button>
-            </form>
+<div class="card p-4 shadow-lg border-0">
+    <h3 class="fw-bold mb-3 text-center">Property Price Predictor</h3>
+    <p class="text-muted text-center mb-4">Select the parameters below to get an estimated valuation.</p>
 
-            {% if prediction %}
-                <div class="alert alert-success mt-4 text-center">
-                    <h5 class="mb-1">Estimated Market Valuation</h5>
-                    <h2 class="fw-bold text-success">{{ prediction.price }}</h2>
-                    <small class="text-muted">For {{ prediction.sqft }} sqft, {{ prediction.bhk }} BHK in {{ prediction.location }}</small>
-                </div>
-            {% endif %}
+    <form method="POST" action="/price_predict">
+        <div class="row g-3">
+            <!-- Locality Dropdown -->
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Select Locality / Area</label>
+                <select name="location" class="form-select" required>
+                    {% for loc in locations %}
+                        <option value="{{ loc }}">{{ loc }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Square Feet Input -->
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Area (Square Feet)</label>
+                <input type="number" name="sqft" class="form-control" value="1200" min="100" max="50000" required>
+            </div>
+
+            <!-- BHK Dropdown (1 to 10) -->
+            <div class="col-md-6">
+                <label class="form-label fw-bold">BHK (Bedrooms)</label>
+                <select name="bhk" class="form-select" required>
+                    {% for n in range(1, 11) %}
+                        <option value="{{ n }}" {% if n == 2 %}selected{% endif %}>{{ n }} BHK</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Bathrooms Dropdown (1 to 10) -->
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Bathrooms</label>
+                <select name="bathrooms" class="form-select" required>
+                    {% for n in range(1, 11) %}
+                        <option value="{{ n }}" {% if n == 2 %}selected{% endif %}>{{ n }} Bathrooms</option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
-    </div>
+
+        <button type="submit" class="btn btn-primary w-100 fw-bold mt-4 py-2">Predict Price</button>
+    </form>
+
+    {% if prediction %}
+        <div class="alert alert-success mt-4 p-4 shadow-sm rounded">
+            <h4 class="fw-bold text-center mb-2">Estimated Valuation: {{ prediction.price }}</h4>
+            <div class="text-center text-muted">
+                <span><strong>Location:</strong> {{ prediction.location }}</span> | 
+                <span><strong>Size:</strong> {{ prediction.sqft }} sqft</span> | 
+                <span><strong>BHK:</strong> {{ prediction.bhk }}</span> | 
+                <span><strong>Bathrooms:</strong> {{ prediction.bathrooms }}</span>
+            </div>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}
