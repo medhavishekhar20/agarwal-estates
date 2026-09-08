@@ -12,6 +12,13 @@ PORTFOLIO_DATA = [
     {'title': 'Luxury 3BHK Villa', 'location': 'Whitefield', 'type': 'Residential', 'purchase_price': '₹75,00,000', 'current_value': '₹85,00,000', 'status': 'Active'}
 ]
 
+# Predefined list of popular locations
+LOCATIONS = [
+    "Whitefield", "Indiranagar", "Koramangala", "Electronic City",
+    "HSR Layout", "Yelahanka", "Hebbal", "Marathahalli",
+    "Sarjapur Road", "Jayanagar"
+]
+
 # ==========================================
 # AUTHENTICATION & ROOT ROUTE (PREVENTS 404)
 # ==========================================
@@ -78,19 +85,22 @@ def price_predict():
             sqft = float(request.form.get('sqft', 1000))
             bhk = int(request.form.get('bhk', 2))
             bath = int(request.form.get('bathrooms', 2))
-            location = request.form.get('location', 'General Area')
+            location = request.form.get('location', LOCATIONS[0])
 
-            estimated_price = round((sqft * 6200) + (bhk * 300000) + (bath * 150000))
-            prediction = {
-                'location': location,
-                'sqft': sqft,
-                'bhk': bhk,
-                'price': f"₹{estimated_price:,.0f}"
-            }
+            # Validation to keep values positive
+            if sqft > 0 and bhk > 0 and bath > 0:
+                estimated_price = round((sqft * 6200) + (bhk * 300000) + (bath * 150000))
+                prediction = {
+                    'location': location,
+                    'sqft': sqft,
+                    'bhk': bhk,
+                    'bathrooms': bath,
+                    'price': f"₹{estimated_price:,.0f}"
+                }
         except ValueError:
             prediction = None
 
-    return render_template('price_predict.html', prediction=prediction)
+    return render_template('price_predict.html', prediction=prediction, locations=LOCATIONS)
 
 @app.route('/compare', methods=['GET', 'POST'])
 def compare():
@@ -122,7 +132,7 @@ def compare():
                 }
             }
             
-    return render_template('compare.html', comparison_data=comparison_data)
+    return render_template('compare.html', comparison_data=comparison_data, locations=LOCATIONS)
 
 @app.route('/emi', methods=['GET', 'POST'])
 def emi():
