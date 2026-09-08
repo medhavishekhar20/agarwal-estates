@@ -10,14 +10,30 @@
             <div class="row g-3">
                 <div class="col-md-5">
                     <label class="form-label fw-bold">First Locality</label>
-                    <input type="text" name="locality1" class="form-control" placeholder="e.g. Whitefield" required>
+                    <select name="locality1" class="form-select" required>
+                        <option value="Whitefield">Whitefield</option>
+                        <option value="Indiranagar">Indiranagar</option>
+                        <option value="Koramangala">Koramangala</option>
+                        <option value="Electronic City">Electronic City</option>
+                        <option value="HSR Layout">HSR Layout</option>
+                        <option value="Yelahanka">Yelahanka</option>
+                        <option value="Hebbal">Hebbal</option>
+                    </select>
                 </div>
                 <div class="col-md-2 d-flex align-items-end justify-content-center">
                     <span class="fw-bold fs-5 text-success mb-2">VS</span>
                 </div>
                 <div class="col-md-5">
                     <label class="form-label fw-bold">Second Locality</label>
-                    <input type="text" name="locality2" class="form-control" placeholder="e.g. Indiranagar" required>
+                    <select name="locality2" class="form-select" required>
+                        <option value="Indiranagar" selected>Indiranagar</option>
+                        <option value="Whitefield">Whitefield</option>
+                        <option value="Koramangala">Koramangala</option>
+                        <option value="Electronic City">Electronic City</option>
+                        <option value="HSR Layout">HSR Layout</option>
+                        <option value="Yelahanka">Yelahanka</option>
+                        <option value="Hebbal">Hebbal</option>
+                    </select>
                 </div>
             </div>
             <button type="submit" class="btn btn-success w-100 fw-bold mt-4 py-2">Compare Localities</button>
