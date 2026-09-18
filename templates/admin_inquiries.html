@@ -1,0 +1,27 @@
+<h2>NRI Advisory - Admin Inquiries Management</h2>
+<table class="table table-striped mt-4">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>User</th>
+      <th>Full Name</th>
+      <th>Email</th>
+      <th>Country</th>
+      <th>Details</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in inquiries %}
+    <tr>
+      <td>{{ item['inquiry_id'] }}</td>
+      <td>{{ item['username'] }}</td>
+      <td>{{ item['full_name'] }}</td>
+      <td>{{ item['email'] }}</td>
+      <td>{{ item['country'] }}</td>
+      <td>{{ item['inquiry_details'] }}</td>
+      <td><span class="badge bg-warning text-dark">{{ item['status'] }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
