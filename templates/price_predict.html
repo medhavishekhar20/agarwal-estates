@@ -49,14 +49,26 @@
     </form>
 
     {% if prediction %}
-        <div class="alert alert-success mt-4 p-4 shadow-sm rounded">
-            <h4 class="fw-bold text-center mb-2">Estimated Valuation: {{ prediction.price }}</h4>
-            <div class="text-center text-muted">
+        <div class="alert alert-success mt-4 p-4 shadow-sm rounded text-center">
+            <h4 class="fw-bold mb-2">Estimated Valuation: {{ prediction.formatted_price if prediction.formatted_price else prediction.price }}</h4>
+            <div class="text-muted mb-3">
                 <span><strong>Location:</strong> {{ prediction.location }}</span> | 
                 <span><strong>Size:</strong> {{ prediction.sqft }} sqft</span> | 
                 <span><strong>BHK:</strong> {{ prediction.bhk }}</span> | 
                 <span><strong>Bathrooms:</strong> {{ prediction.bathrooms }}</span>
             </div>
+
+            <!-- Add to Portfolio Form -->
+            <form method="POST" action="/add_to_portfolio" class="d-inline-block">
+                <input type="hidden" name="location" value="{{ prediction.location }}">
+                <input type="hidden" name="sqft" value="{{ prediction.sqft }}">
+                <input type="hidden" name="bhk" value="{{ prediction.bhk }}">
+                <input type="hidden" name="bathrooms" value="{{ prediction.bathrooms }}">
+                <input type="hidden" name="price" value="{{ prediction.price_raw if prediction.price_raw else prediction.price }}">
+                <button type="submit" class="btn btn-success fw-bold px-4">
+                    <i class="bi bi-plus-circle me-1"></i> Save to Portfolio
+                </button>
+            </form>
         </div>
     {% endif %}
 </div>
