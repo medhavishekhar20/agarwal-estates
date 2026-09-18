@@ -62,11 +62,10 @@ def init_db():
         )
     ''')
     
-    # Migration safeguard for existing Render SQLite database
     try:
         cursor.execute("ALTER TABLE properties ADD COLUMN username TEXT NOT NULL DEFAULT 'admin'")
     except sqlite3.OperationalError:
-        pass  # Column already exists
+        pass
         
     conn.commit()
     conn.close()
@@ -251,7 +250,6 @@ def portfolio():
         avg_sqft=formatted_avg_sqft
     )
 
-# Fix: Added aliases for both /nri-desk and /nri_desk to avoid 404 errors
 @app.route('/nri-desk', methods=['GET', 'POST'])
 @app.route('/nri_desk', methods=['GET', 'POST'])
 def nri_desk():
@@ -261,7 +259,7 @@ def nri_desk():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    if request.method == 'POST':
+    if request.method == 'POST' and session.get('role') != 'admin':
         full_name = request.form.get('full_name')
         email = request.form.get('email')
         country = request.form.get('country')
@@ -278,11 +276,12 @@ def nri_desk():
         log_event(username, '/nri_desk', 'Submitted new NRI inquiry')
         flash("Your inquiry has been submitted successfully!", "success")
 
-    cursor.execute('''
-        SELECT * FROM nri_inquiries 
-        WHERE username = ? 
-        ORDER BY created_at DESC
-    ''', (session.get('user', 'admin'),))
+    # Admins see all inquiries; regular users see only their own
+    if session.get('role') == 'admin':
+        cursor.execute('SELECT * FROM nri_inquiries ORDER BY created_at DESC')
+    else:
+        cursor.execute('SELECT * FROM nri_inquiries WHERE username = ? ORDER BY created_at DESC', (session.get('user', 'admin'),))
+
     my_inquiries = cursor.fetchall()
     conn.close()
 
