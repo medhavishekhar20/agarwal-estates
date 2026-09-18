@@ -1,233 +1,194 @@
-import os
-import pandas as pd
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+import sqlite3
+from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'agarwal_estates_secure_key_999'
+app.secret_key = "agarwal_estates_secret_key"
+DB_NAME = "database.db"
 
+# ==========================================
+# HARDCODED PRE-BUILT ADMIN CREDENTIALS
+# ==========================================
+ADMIN_USERNAME = "admin_master"
 ADMIN_PIN = "1234"
 
-# Global portfolio storage
-PORTFOLIO_DATA = [
-    {'title': 'Luxury 3BHK Villa', 'location': 'Whitefield', 'type': 'Residential', 'purchase_price': '₹75,00,000', 'current_value': '₹85,00,000', 'status': 'Active'}
-]
+def get_db_connection():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-# Predefined list of popular locations
-LOCATIONS = [
-    "Whitefield", "Indiranagar", "Koramangala", "Electronic City",
-    "HSR Layout", "Yelahanka", "Hebbal", "Marathahalli",
-    "Sarjapur Road", "Jayanagar"
-]
+def init_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Users Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'buyer'
+        )
+    ''')
+    
+    # Audit Logs Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            user TEXT NOT NULL,
+            action_route TEXT NOT NULL,
+            details TEXT NOT NULL
+        )
+    ''')
+    
+    # NRI Inquiries Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS nri_inquiries (
+            inquiry_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            full_name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            country TEXT NOT NULL,
+            phone_number TEXT NOT NULL,
+            inquiry_details TEXT NOT NULL,
+            status TEXT DEFAULT 'Pending',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
+
+init_db()
+
+def log_event(user, action_route, details):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO audit_logs (user, action_route, details)
+        VALUES (?, ?, ?)
+    ''', (user, action_route, details))
+    conn.commit()
+    conn.close()
 
 # ==========================================
-# AUTHENTICATION & ROOT ROUTE (PREVENTS 404)
+# PUBLIC LOGIN (BUYER & EMPLOYEE ONLY)
 # ==========================================
-
-@app.route('/')
-def home():
-    if 'user' in session:
-        return redirect(url_for('price_predict'))
-    return redirect(url_for('login'))
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form.get('username')
-        role = request.form.get('role', 'user')
-        pin = request.form.get('admin_pin', '')
+        password = request.form.get('password')
+        role = request.form.get('role')  # Expects 'buyer' or 'employee'
 
-        if role == 'admin' and pin != ADMIN_PIN:
-            flash("Invalid Admin PIN! Access denied.", "danger")
-            return render_template('login.html')
+        # Block any attempt to log in as Admin via public login
+        if role == 'admin':
+            flash("Admin login is disabled here. Use the secure portal link.", "danger")
+            return redirect(url_for('login'))
 
-        if username:
-            session['user'] = username
-            session['role'] = role
-            return redirect(url_for('price_predict'))
+        if role not in ['buyer', 'employee']:
+            flash("Invalid role selected. Allowed: Buyer or Employee.", "danger")
+            return redirect(url_for('login'))
+
+        session['user'] = username
+        session['role'] = role
+        log_event(username, '/login', f'Logged in as {role}')
+        flash(f'Successfully logged in as {role.capitalize()}!', 'success')
+        return redirect(url_for('nri_desk'))
 
     return render_template('login.html')
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
+# ==========================================
+# PRE-BUILT SECRET ADMIN PORTAL
+# ==========================================
+@app.route('/secret-admin-portal', methods=['GET', 'POST'])
+def secret_admin_login():
+    """Hidden route for Admin authentication using pre-built code credentials."""
     if request.method == 'POST':
-        username = request.form.get('username') or request.form.get('name')
-        role = request.form.get('role', 'user')
-        pin = request.form.get('admin_pin', '')
+        entered_pin = request.form.get('admin_pin')
+        
+        if entered_pin == ADMIN_PIN:
+            session['user'] = ADMIN_USERNAME
+            session['role'] = 'admin'
+            log_event(ADMIN_USERNAME, '/secret-admin-portal', 'Admin authenticated via master PIN')
+            flash('Admin authentication successful.', 'success')
+            return redirect(url_for('admin_inquiries'))
+        else:
+            log_event('UNKNOWN', '/secret-admin-portal', 'Failed Admin PIN attempt')
+            flash('Invalid Security PIN.', 'danger')
 
-        if role == 'admin' and pin != ADMIN_PIN:
-            flash("Invalid Admin PIN! Cannot register as Admin.", "danger")
-            return render_template('register.html')
+    return render_template('admin_secret_login.html')
 
-        if username:
-            session['user'] = username
-            session['role'] = role
-            return redirect(url_for('price_predict'))
+# ==========================================
+# NRI DESK (BUYER & EMPLOYEE VIEW)
+# ==========================================
+@app.route('/nri-desk', methods=['GET', 'POST'])
+def nri_desk():
+    if 'user' not in session:
+        flash("Please log in first.", "warning")
+        return redirect(url_for('login'))
 
-    return render_template('register.html')
+    # If Admin accesses this, redirect to Admin Inquiries Dashboard
+    if session.get('role') == 'admin':
+        return redirect(url_for('admin_inquiries'))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        full_name = request.form.get('full_name')
+        email = request.form.get('email')
+        country = request.form.get('country')
+        phone = request.form.get('phone')
+        details = request.form.get('details')
+        username = session.get('user')
+
+        cursor.execute('''
+            INSERT INTO nri_inquiries (username, full_name, email, country, phone_number, inquiry_details)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (username, full_name, email, country, phone, details))
+        
+        conn.commit()
+        log_event(username, '/nri-desk', 'Submitted new NRI inquiry')
+        flash("Your inquiry has been submitted successfully!", "success")
+
+    # Fetch inquiries submitted ONLY by the logged-in user
+    cursor.execute('''
+        SELECT * FROM nri_inquiries 
+        WHERE username = ? 
+        ORDER BY created_at DESC
+    ''', (session.get('user'),))
+    my_inquiries = cursor.fetchall()
+    conn.close()
+
+    return render_template('nri_desk.html', inquiries=my_inquiries)
+
+# ==========================================
+# ADMIN-ONLY INQUIRIES DASHBOARD
+# ==========================================
+@app.route('/admin/inquiries')
+def admin_inquiries():
+    if session.get('role') != 'admin':
+        flash("Access Denied: Administrative privileges required.", "danger")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM nri_inquiries ORDER BY created_at DESC')
+    all_inquiries = cursor.fetchall()
+    conn.close()
+
+    log_event(session.get('user'), '/admin/inquiries', 'Viewed all NRI inquiries')
+    return render_template('admin_inquiries.html', inquiries=all_inquiries)
 
 @app.route('/logout')
 def logout():
+    user = session.get('user', 'Guest')
+    log_event(user, '/logout', 'User logged out')
     session.clear()
+    flash('Logged out successfully.', 'info')
     return redirect(url_for('login'))
-
-# ==========================================
-# FEATURE ROUTES
-# ==========================================
-
-@app.route('/price_predict', methods=['GET', 'POST'])
-def price_predict():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-
-    prediction = None
-    if request.method == 'POST':
-        try:
-            sqft = float(request.form.get('sqft', 1000))
-            bhk = int(request.form.get('bhk', 2))
-            bath = int(request.form.get('bathrooms', 2))
-            location = request.form.get('location', LOCATIONS[0])
-
-            # Validation to keep values positive
-            if sqft > 0 and bhk > 0 and bath > 0:
-                estimated_price = round((sqft * 6200) + (bhk * 300000) + (bath * 150000))
-                prediction = {
-                    'location': location,
-                    'sqft': sqft,
-                    'bhk': bhk,
-                    'bathrooms': bath,
-                    'price': f"₹{estimated_price:,.0f}"
-                }
-        except ValueError:
-            prediction = None
-
-    return render_template('price_predict.html', prediction=prediction, locations=LOCATIONS)
-
-@app.route('/compare', methods=['GET', 'POST'])
-def compare():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-        
-    comparison_data = None
-    if request.method == 'POST':
-        loc1 = request.form.get('locality1', '').strip()
-        loc2 = request.form.get('locality2', '').strip()
-        
-        if loc1 and loc2:
-            comparison_data = {
-                'locality1': {
-                    'name': loc1,
-                    'avg_price': '₹6,850 / sqft',
-                    'price_range': '₹5,200 - ₹8,500 / sqft',
-                    'growth': '8.5% p.a.',
-                    'connectivity': 'High (Metro / Ring Road)',
-                    'livability': '8.8 / 10'
-                },
-                'locality2': {
-                    'name': loc2,
-                    'avg_price': '₹8,400 / sqft',
-                    'price_range': '₹7,100 - ₹11,200 / sqft',
-                    'growth': '6.2% p.a.',
-                    'connectivity': 'Moderate (Bus / Highway)',
-                    'livability': '8.2 / 10'
-                }
-            }
-            
-    return render_template('compare.html', comparison_data=comparison_data, locations=LOCATIONS)
-
-@app.route('/emi', methods=['GET', 'POST'])
-def emi():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    return render_template('emi.html')
-
-@app.route('/nri_desk', methods=['GET', 'POST'])
-def nri_desk():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    return render_template('nri_desk.html')
-
-# ==========================================
-# ADMIN ONLY ROUTES
-# ==========================================
-
-@app.route('/portfolio', methods=['GET', 'POST'])
-def portfolio():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    if session.get('role') != 'admin':
-        return redirect(url_for('price_predict'))
-
-    if request.method == 'POST':
-        title = request.form.get('title')
-        location = request.form.get('location')
-        p_type = request.form.get('type')
-        p_price = request.form.get('purchase_price')
-        c_val = request.form.get('current_value')
-
-        if title and location:
-            PORTFOLIO_DATA.append({
-                'title': title,
-                'location': location,
-                'type': p_type,
-                'purchase_price': f"₹{int(p_price):,}" if p_price and p_price.isdigit() else p_price,
-                'current_value': f"₹{int(c_val):,}" if c_val and c_val.isdigit() else c_val,
-                'status': 'Active'
-            })
-            flash("New property asset added successfully!", "success")
-
-    summary = {
-        'total_value': '₹1,25,00,000',
-        'total_properties': len(PORTFOLIO_DATA),
-        'avg_yield': 5.4
-    }
-    return render_template('portfolio.html', summary=summary, properties=PORTFOLIO_DATA)
-
-@app.route('/audit_logs')
-def audit_logs():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    if session.get('role') != 'admin':
-        return redirect(url_for('price_predict'))
-
-    logs = [
-        {'timestamp': '2026-08-30 11:30:00', 'username': session.get('user'), 'action': 'LOGIN', 'details': f"Logged in as {session.get('role')}"}
-    ]
-    return render_template('audit_logs.html', logs=logs)
-
-@app.route('/dataset_management', methods=['GET', 'POST'])
-def dataset_management():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    if session.get('role') != 'admin':
-        return redirect(url_for('price_predict'))
-
-    tables = None
-    row_count = 0
-    col_count = 0
-    message = None
-
-    if request.method == 'POST':
-        file = request.files.get('dataset_file')
-        if file and file.filename.endswith('.csv'):
-            try:
-                df = pd.read_csv(file)
-                row_count, col_count = df.shape
-                
-                tables = df.to_html(
-                    classes='table table-striped table-hover table-bordered table-dark text-nowrap', 
-                    index=True
-                )
-                message = f"Full Dataset Loaded Successfully! Total Records: {row_count:,} Rows | {col_count} Columns"
-            except Exception as e:
-                message = f"Error processing CSV: {str(e)}"
-
-    return render_template(
-        'dataset_management.html', 
-        tables=tables, 
-        row_count=row_count, 
-        col_count=col_count, 
-        message=message
-    )
 
 if __name__ == '__main__':
     app.run(debug=True)
