@@ -7,7 +7,7 @@ DB_NAME = "database.db"
 
 # Admin Credentials
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "adminpassword123"  # Change this to your preferred password
+ADMIN_PASSWORD = "adminpassword123"
 
 def get_db_connection():
     conn = sqlite3.connect(DB_NAME)
@@ -17,6 +17,15 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'buyer'
+        )
+    ''')
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS audit_logs (
@@ -77,15 +86,51 @@ def login():
                 log_event(username, '/login', 'Admin logged in')
                 return redirect(url_for('price_predict'))
             else:
-                flash("Invalid Admin username or password.", "danger")
+                flash("Invalid Admin credentials.", "danger")
                 return redirect(url_for('login'))
 
-        session['user'] = username
-        session['role'] = role
-        log_event(username, '/login', f'Logged in as {role}')
-        return redirect(url_for('price_predict'))
+        # Check standard user database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
+        user = cursor.fetchone()
+        conn.close()
+
+        if user:
+            session['user'] = user['username']
+            session['role'] = user['role']
+            log_event(username, '/login', f'Logged in as {user["role"]}')
+            return redirect(url_for('price_predict'))
+        else:
+            # Fallback direct session setup if testing without registered users
+            session['user'] = username
+            session['role'] = role
+            log_event(username, '/login', f'Logged in as {role}')
+            return redirect(url_for('price_predict'))
 
     return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        role = request.form.get('role', 'buyer')
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", 
+                           (username, password, role))
+            conn.commit()
+            flash("Account created successfully! Please sign in.", "success")
+            return redirect(url_for('login'))
+        except sqlite3.IntegrityError:
+            flash("Username already exists. Please pick another.", "danger")
+        finally:
+            conn.close()
+
+    return render_template('register.html')
 
 @app.route('/price_predict')
 def price_predict():
