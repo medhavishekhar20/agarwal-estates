@@ -3,37 +3,75 @@
 {% block content %}
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold">My Property Portfolio</h2>
-        <span class="badge bg-primary fs-6">User: {{ session.get('user', 'Guest') }}</span>
+        <div>
+            <h2 class="fw-bold mb-1">My Real Estate Portfolio</h2>
+            <p class="text-muted mb-0">Track your saved valuations and managed property assets.</p>
+        </div>
+        <div>
+            <button class="btn btn-primary fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#addPropertyForm">
+                <i class="bi bi-plus-lg me-1"></i> Add Property Asset
+            </button>
+        </div>
     </div>
 
-    <!-- Analytics Cards -->
+    <!-- Quick Stats Cards -->
     <div class="row g-3 mb-4">
         <div class="col-md-4">
-            <div class="card p-3 shadow-sm border-0 border-start border-primary border-4">
-                <span class="text-muted small fw-bold">Total Properties</span>
-                <h3 class="fw-bold my-1">{{ total_properties|default(0) }}</h3>
+            <div class="card p-3 border-0 shadow-sm bg-light">
+                <div class="text-muted small fw-bold">TOTAL PROPERTIES</div>
+                <div class="fs-3 fw-bold text-dark">{{ total_properties }}</div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card p-3 shadow-sm border-0 border-start border-success border-4">
-                <span class="text-muted small fw-bold">Estimated Portfolio Value</span>
-                <h3 class="fw-bold my-1">{{ total_value|default('₹ 0.00') }}</h3>
+            <div class="card p-3 border-0 shadow-sm bg-light">
+                <div class="text-muted small fw-bold">PORTFOLIO VALUATION</div>
+                <div class="fs-3 fw-bold text-success">{{ total_value }}</div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card p-3 shadow-sm border-0 border-start border-info border-4">
-                <span class="text-muted small fw-bold">Average Property Size</span>
-                <h3 class="fw-bold my-1">{{ avg_sqft|default('0') }} sqft</h3>
+            <div class="card p-3 border-0 shadow-sm bg-light">
+                <div class="text-muted small fw-bold">AVG AREA (SQFT)</div>
+                <div class="fs-3 fw-bold text-primary">{{ avg_sqft }}</div>
             </div>
         </div>
     </div>
 
-    <!-- Property Table -->
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-white py-3">
-            <h5 class="fw-bold mb-0">Saved Properties</h5>
+    <!-- Manual Add Property Collapsible Form -->
+    <div class="collapse mb-4" id="addPropertyForm">
+        <div class="card p-4 shadow-sm border-0">
+            <h5 class="fw-bold mb-3">Add New Property to Portfolio</h5>
+            <form method="POST" action="/add_to_portfolio">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Locality / Area</label>
+                        <input type="text" name="location" class="form-control" placeholder="e.g. Indiranagar" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Area (Sq Ft)</label>
+                        <input type="number" name="sqft" class="form-control" placeholder="1200" step="any" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">BHK</label>
+                        <input type="number" name="bhk" class="form-control" value="2" min="1" max="10" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Bathrooms</label>
+                        <input type="number" name="bathrooms" class="form-control" value="2" min="1" max="10" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Valuation / Price (₹)</label>
+                        <input type="number" name="price" class="form-control" placeholder="7500000" step="any" required>
+                    </div>
+                </div>
+                <div class="mt-3 text-end">
+                    <button type="submit" class="btn btn-success fw-bold px-4">Save Asset</button>
+                </div>
+            </form>
         </div>
+    </div>
+
+    <!-- Properties Table -->
+    <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
@@ -41,10 +79,10 @@
                         <tr>
                             <th>#</th>
                             <th>Location</th>
-                            <th>Square Feet</th>
-                            <th>Configuration</th>
+                            <th>Size (Sqft)</th>
+                            <th>BHK</th>
+                            <th>Bathrooms</th>
                             <th>Estimated Value</th>
-                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -52,17 +90,19 @@
                             {% for prop in properties %}
                                 <tr>
                                     <td>{{ loop.index }}</td>
-                                    <td>{{ prop.location|default('N/A') }}</td>
-                                    <td>{{ prop.sqft|default(0) }} sqft</td>
-                                    <td>{{ prop.bhk|default(0) }} BHK / {{ prop.bathrooms|default(0) }} Bath</td>
-                                    <td class="fw-bold text-success">₹ {{ "{:,.2f}".format(prop.price|default(0)) }}</td>
-                                    <td><span class="badge bg-success">Active</span></td>
+                                    <td><strong>{{ prop.location }}</strong></td>
+                                    <td>{{ "{:,.1f}".format(prop.sqft) if prop.sqft else '0' }} sqft</td>
+                                    <td>{{ prop.bhk }} BHK</td>
+                                    <td>{{ prop.bathrooms }} Bath</td>
+                                    <td class="fw-bold text-success">
+                                        ₹ {{ "{:,.2f}".format(prop.price) if prop.price else '0.00' }}
+                                    </td>
                                 </tr>
                             {% endfor %}
                         {% else %}
                             <tr>
                                 <td colspan="6" class="text-center py-4 text-muted">
-                                    No property records found in your portfolio.
+                                    No assets in your portfolio yet. Click <strong>"Add Property Asset"</strong> above or use the Price Predictor tool to save properties.
                                 </td>
                             </tr>
                         {% endif %}
