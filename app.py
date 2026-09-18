@@ -73,6 +73,13 @@ def log_event(user, action_route, details):
     conn.close()
 
 # ==========================================
+# ROOT ROUTE (FIXES 404 NOT FOUND ERROR)
+# ==========================================
+@app.route('/')
+def home():
+    return redirect(url_for('login'))
+
+# ==========================================
 # PUBLIC LOGIN (BUYER & EMPLOYEE ONLY)
 # ==========================================
 @app.route('/login', methods=['GET', 'POST'])
