@@ -124,7 +124,6 @@ def login():
             log_event(user['username'], '/login', f'Logged in as {user["role"]}')
             return redirect(url_for('price_predict'))
         else:
-            # Rejects invalid credentials and keeps the user on the login screen
             flash("Invalid username or password. Please try again.", "danger")
             return redirect(url_for('login'))
 
@@ -291,11 +290,42 @@ def nri_desk():
 
     return render_template('nri_desk.html', inquiries=my_inquiries)
 
-@app.route('/compare')
+@app.route('/compare', methods=['GET', 'POST'])
 def compare():
     if 'user' not in session:
         return redirect(url_for('login'))
-    return render_template('compare.html')
+
+    username = session.get('user', 'admin')
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if session.get('role') == 'admin':
+        cursor.execute("SELECT * FROM properties")
+    else:
+        cursor.execute("SELECT * FROM properties WHERE username = ?", (username,))
+    
+    user_properties = cursor.fetchall()
+
+    prop1 = None
+    prop2 = None
+
+    if request.method == 'POST':
+        prop1_id = request.form.get('prop1_id')
+        prop2_id = request.form.get('prop2_id')
+
+        if prop1_id:
+            cursor.execute("SELECT * FROM properties WHERE property_id = ?", (prop1_id,))
+            prop1 = cursor.fetchone()
+
+        if prop2_id:
+            cursor.execute("SELECT * FROM properties WHERE property_id = ?", (prop2_id,))
+            prop2 = cursor.fetchone()
+
+        log_event(username, '/compare', f'Compared properties ID {prop1_id} and ID {prop2_id}')
+
+    conn.close()
+
+    return render_template('compare.html', properties=user_properties, prop1=prop1, prop2=prop2)
 
 @app.route('/emi')
 def emi():
