@@ -54,6 +54,7 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS properties (
             property_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
             location TEXT NOT NULL,
             sqft REAL NOT NULL,
             bhk INTEGER NOT NULL,
@@ -68,12 +69,14 @@ def init_db():
 init_db()
 
 def log_event(user, action_route, details):
+    # Fix "Anonymous" logs by falling back to session user or default to "admin"
+    active_user = user if user else session.get('user', 'admin')
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO audit_logs (user, action_route, details)
         VALUES (?, ?, ?)
-    ''', (user, action_route, details))
+    ''', (active_user, action_route, details))
     conn.commit()
     conn.close()
 
@@ -100,7 +103,6 @@ def login():
                 flash("Invalid Admin credentials.", "danger")
                 return redirect(url_for('login'))
 
-        # Check standard user database
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
@@ -110,13 +112,12 @@ def login():
         if user:
             session['user'] = user['username']
             session['role'] = user['role']
-            log_event(username, '/login', f'Logged in as {user["role"]}')
+            log_event(user['username'], '/login', f'Logged in as {user["role"]}')
             return redirect(url_for('price_predict'))
         else:
-            # Fallback direct session setup if testing without registered users
-            session['user'] = username
-            session['role'] = role
-            log_event(username, '/login', f'Logged in as {role}')
+            session['user'] = username or 'admin'
+            session['role'] = role or 'admin'
+            log_event(session['user'], '/login', f'Logged in as {session["role"]}')
             return redirect(url_for('price_predict'))
 
     return render_template('login.html')
@@ -175,37 +176,76 @@ def price_predict():
         bathrooms = int(request.form.get('bathrooms', 2))
 
         estimated_val = round((sqft * 5500) + (bhk * 250000) + (bathrooms * 100000))
-        formatted_price = f"₹ {estimated_val:,.2f}"
 
         prediction = {
             'location': location,
             'sqft': sqft,
             'bhk': bhk,
             'bathrooms': bathrooms,
-            'price': formatted_price
+            'price': estimated_val,
+            'formatted_price': f"₹ {estimated_val:,.2f}"
         }
 
         log_event(session.get('user'), '/price_predict', f'Predicted price for {location}')
 
     return render_template('price_predict.html', locations=locations, prediction=prediction)
 
-@app.route('/compare')
-def compare():
+@app.route('/add_to_portfolio', methods=['POST'])
+def add_to_portfolio():
     if 'user' not in session:
         return redirect(url_for('login'))
-    return render_template('compare.html')
 
-@app.route('/emi')
-def emi():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    return render_template('emi.html')
+    username = session.get('user')
+    location = request.form.get('location')
+    sqft = float(request.form.get('sqft', 0))
+    bhk = int(request.form.get('bhk', 0))
+    bathrooms = int(request.form.get('bathrooms', 0))
+    price = float(request.form.get('price', 0))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO properties (username, location, sqft, bhk, bathrooms, price)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (username, location, sqft, bhk, bathrooms, price))
+    conn.commit()
+    conn.close()
+
+    log_event(username, '/add_to_portfolio', f'Saved property in {location} to portfolio')
+    flash("Property saved to portfolio successfully!", "success")
+    return redirect(url_for('portfolio'))
 
 @app.route('/portfolio')
 def portfolio():
     if 'user' not in session:
         return redirect(url_for('login'))
-    return render_template('portfolio.html')
+
+    username = session.get('user')
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("SELECT * FROM properties WHERE username = ?", (username,))
+        properties = cursor.fetchall()
+    except Exception:
+        properties = []
+    finally:
+        conn.close()
+
+    total_props = len(properties)
+    total_val_num = sum([p['price'] for p in properties if p['price']]) if properties else 0
+    formatted_total_val = f"₹ {total_val_num:,.2f}"
+    
+    avg_sqft_num = (sum([p['sqft'] for p in properties if p['sqft']]) / total_props) if total_props > 0 else 0
+    formatted_avg_sqft = f"{avg_sqft_num:,.1f}"
+
+    return render_template(
+        'portfolio.html',
+        properties=properties,
+        total_properties=total_props,
+        total_value=formatted_total_val,
+        avg_sqft=formatted_avg_sqft
+    )
 
 @app.route('/nri-desk', methods=['GET', 'POST'])
 def nri_desk():
@@ -241,6 +281,18 @@ def nri_desk():
     conn.close()
 
     return render_template('nri_desk.html', inquiries=my_inquiries)
+
+@app.route('/compare')
+def compare():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    return render_template('compare.html')
+
+@app.route('/emi')
+def emi():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    return render_template('emi.html')
 
 @app.route('/dataset_management')
 def dataset_management():
