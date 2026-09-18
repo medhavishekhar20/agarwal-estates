@@ -51,6 +51,17 @@ def init_db():
         )
     ''')
     
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS properties (
+            property_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            location TEXT NOT NULL,
+            sqft REAL NOT NULL,
+            bhk INTEGER NOT NULL,
+            bathrooms INTEGER NOT NULL,
+            price REAL NOT NULL
+        )
+    ''')
+    
     conn.commit()
     conn.close()
 
@@ -132,11 +143,51 @@ def register():
 
     return render_template('register.html')
 
-@app.route('/price_predict')
+@app.route('/price_predict', methods=['GET', 'POST'])
 def price_predict():
     if 'user' not in session:
         return redirect(url_for('login'))
-    return render_template('price_predict.html')
+
+    default_locations = [
+        "Whitefield", "Koramangala", "Indiranagar", "HSR Layout", 
+        "Electronic City", "Jayanagar", "JP Nagar", "Hebbal", 
+        "Banashankari", "Marathahalli", "Yelahanka", "Sarjapur Road"
+    ]
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT location FROM properties ORDER BY location ASC")
+        rows = cursor.fetchall()
+        conn.close()
+        locations = [row['location'] for row in rows if row['location']]
+        if not locations:
+            locations = default_locations
+    except Exception:
+        locations = default_locations
+
+    prediction = None
+
+    if request.method == 'POST':
+        location = request.form.get('location')
+        sqft = float(request.form.get('sqft', 1200))
+        bhk = int(request.form.get('bhk', 2))
+        bathrooms = int(request.form.get('bathrooms', 2))
+
+        estimated_val = round((sqft * 5500) + (bhk * 250000) + (bathrooms * 100000))
+        formatted_price = f"₹ {estimated_val:,.2f}"
+
+        prediction = {
+            'location': location,
+            'sqft': sqft,
+            'bhk': bhk,
+            'bathrooms': bathrooms,
+            'price': formatted_price
+        }
+
+        log_event(session.get('user'), '/price_predict', f'Predicted price for {location}')
+
+    return render_template('price_predict.html', locations=locations, prediction=prediction)
 
 @app.route('/compare')
 def compare():
