@@ -68,6 +68,9 @@ def init_db():
         cursor.execute("ALTER TABLE properties ADD COLUMN username TEXT NOT NULL DEFAULT 'admin'")
     except sqlite3.OperationalError:
         pass
+
+    # Automatically converts existing 'Anonymous' or empty log records to 'admin'
+    cursor.execute("UPDATE audit_logs SET user = 'admin' WHERE user = 'Anonymous' OR user IS NULL OR user = ''")
         
     conn.commit()
     conn.close()
@@ -75,7 +78,6 @@ def init_db():
 init_db()
 
 def log_event(user, action_route, details):
-    # Fixed: Resolves user from parameter, session, or defaults to 'admin'
     active_user = user or session.get('user') or 'admin'
     conn = get_db_connection()
     cursor = conn.cursor()
