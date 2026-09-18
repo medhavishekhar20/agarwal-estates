@@ -69,7 +69,6 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
-    # Automatically converts existing 'Anonymous' or empty log records to 'admin'
     cursor.execute("UPDATE audit_logs SET user = 'admin' WHERE user = 'Anonymous' OR user IS NULL OR user = ''")
         
     conn.commit()
@@ -101,16 +100,18 @@ def login():
         password = request.form.get('password')
         role = request.form.get('role')
 
+        # 1. Handle Admin Authentication
         if role == 'admin':
             if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
                 session['user'] = ADMIN_USERNAME
                 session['role'] = 'admin'
-                log_event(ADMIN_USERNAME, '/login', 'Admin logged in')
+                log_event(ADMIN_USERNAME, '/login', 'Admin logged in successfully')
                 return redirect(url_for('price_predict'))
             else:
-                flash("Invalid Admin credentials.", "danger")
+                flash("Invalid Admin username or password.", "danger")
                 return redirect(url_for('login'))
 
+        # 2. Handle Regular User / Buyer / Employer Authentication
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
@@ -123,10 +124,9 @@ def login():
             log_event(user['username'], '/login', f'Logged in as {user["role"]}')
             return redirect(url_for('price_predict'))
         else:
-            session['user'] = username if username else 'admin'
-            session['role'] = role if role else 'admin'
-            log_event(session['user'], '/login', f'Logged in as {session["role"]}')
-            return redirect(url_for('price_predict'))
+            # Rejects invalid credentials and keeps the user on the login screen
+            flash("Invalid username or password. Please try again.", "danger")
+            return redirect(url_for('login'))
 
     return render_template('login.html')
 
