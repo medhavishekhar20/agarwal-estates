@@ -75,7 +75,8 @@ def init_db():
 init_db()
 
 def log_event(user, action_route, details):
-    active_user = user if user else session.get('user', 'admin')
+    # Fixed: Resolves user from parameter, session, or defaults to 'admin'
+    active_user = user or session.get('user') or 'admin'
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -100,9 +101,9 @@ def login():
 
         if role == 'admin':
             if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
-                session['user'] = username
+                session['user'] = ADMIN_USERNAME
                 session['role'] = 'admin'
-                log_event(username, '/login', 'Admin logged in')
+                log_event(ADMIN_USERNAME, '/login', 'Admin logged in')
                 return redirect(url_for('price_predict'))
             else:
                 flash("Invalid Admin credentials.", "danger")
@@ -120,8 +121,8 @@ def login():
             log_event(user['username'], '/login', f'Logged in as {user["role"]}')
             return redirect(url_for('price_predict'))
         else:
-            session['user'] = username or 'admin'
-            session['role'] = role or 'admin'
+            session['user'] = username if username else 'admin'
+            session['role'] = role if role else 'admin'
             log_event(session['user'], '/login', f'Logged in as {session["role"]}')
             return redirect(url_for('price_predict'))
 
@@ -336,7 +337,8 @@ def dataset_management():
                     na_rep='N/A'
                 )
                 
-                log_event(session.get('user'), '/dataset_management', f'Uploaded and viewed dataset: {file.filename}')
+                current_user = session.get('user', 'admin')
+                log_event(current_user, '/dataset_management', f'Uploaded dataset: {file.filename}')
                 flash(f"Dataset '{file.filename}' loaded successfully!", "success")
             except Exception as e:
                 flash(f"Error processing CSV file: {str(e)}", "danger")
