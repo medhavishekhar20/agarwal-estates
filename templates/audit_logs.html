@@ -27,8 +27,8 @@
                         <tr>
                             <td>{{ loop.index }}</td>
                             <td>{{ log.timestamp }}</td>
-                            <td>{{ log.username or 'Anonymous' }}</td>
-                            <td><code>{{ log.action }}</code></td>
+                            <td>{{ log.user if log.user and log.user != 'Anonymous' else 'admin' }}</td>
+                            <td><code>{{ log.action_route }}</code></td>
                             <td>{{ log.details }}</td>
                         </tr>
                         {% endfor %}
