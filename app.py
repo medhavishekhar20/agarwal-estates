@@ -73,53 +73,43 @@ def log_event(user, action_route, details):
     conn.close()
 
 # ==========================================
-# ROOT ROUTE (FIXES 404 NOT FOUND ERROR)
+# ROOT ROUTE
 # ==========================================
 @app.route('/')
 def home():
+    if 'user' in session:
+        return redirect(url_for('price_predict'))
     return redirect(url_for('login'))
 
 # ==========================================
-# PUBLIC LOGIN (BUYER & EMPLOYEE ONLY)
+# AUTHENTICATION
 # ==========================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        role = request.form.get('role')  # Expects 'buyer' or 'employee'
+        role = request.form.get('role')
 
-        # Block any attempt to log in as Admin via public login
         if role == 'admin':
             flash("Admin login is disabled here. Use the secure portal link.", "danger")
-            return redirect(url_for('login'))
-
-        if role not in ['buyer', 'employee']:
-            flash("Invalid role selected. Allowed: Buyer or Employee.", "danger")
             return redirect(url_for('login'))
 
         session['user'] = username
         session['role'] = role
         log_event(username, '/login', f'Logged in as {role}')
-        flash(f'Successfully logged in as {role.capitalize()}!', 'success')
-        return redirect(url_for('nri_desk'))
+        return redirect(url_for('price_predict'))
 
     return render_template('login.html')
 
-# ==========================================
-# PRE-BUILT SECRET ADMIN PORTAL
-# ==========================================
 @app.route('/secret-admin-portal', methods=['GET', 'POST'])
 def secret_admin_login():
-    """Hidden route for Admin authentication using pre-built code credentials."""
     if request.method == 'POST':
         entered_pin = request.form.get('admin_pin')
-        
         if entered_pin == ADMIN_PIN:
             session['user'] = ADMIN_USERNAME
             session['role'] = 'admin'
             log_event(ADMIN_USERNAME, '/secret-admin-portal', 'Admin authenticated via master PIN')
-            flash('Admin authentication successful.', 'success')
             return redirect(url_for('admin_inquiries'))
         else:
             log_event('UNKNOWN', '/secret-admin-portal', 'Failed Admin PIN attempt')
@@ -128,17 +118,36 @@ def secret_admin_login():
     return render_template('admin_secret_login.html')
 
 # ==========================================
-# NRI DESK (BUYER & EMPLOYEE VIEW)
+# FEATURE ROUTES
 # ==========================================
+@app.route('/price_predict', methods=['GET', 'POST'])
+def price_predict():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    return render_template('price_predict.html')
+
+@app.route('/compare', methods=['GET', 'POST'])
+def compare():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    return render_template('compare.html')
+
+@app.route('/emi', methods=['GET', 'POST'])
+def emi():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    return render_template('emi.html')
+
+@app.route('/portfolio')
+def portfolio():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    return render_template('portfolio.html')
+
 @app.route('/nri-desk', methods=['GET', 'POST'])
 def nri_desk():
     if 'user' not in session:
-        flash("Please log in first.", "warning")
         return redirect(url_for('login'))
-
-    # If Admin accesses this, redirect to Admin Inquiries Dashboard
-    if session.get('role') == 'admin':
-        return redirect(url_for('admin_inquiries'))
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -160,7 +169,6 @@ def nri_desk():
         log_event(username, '/nri-desk', 'Submitted new NRI inquiry')
         flash("Your inquiry has been submitted successfully!", "success")
 
-    # Fetch inquiries submitted ONLY by the logged-in user
     cursor.execute('''
         SELECT * FROM nri_inquiries 
         WHERE username = ? 
@@ -171,13 +179,30 @@ def nri_desk():
 
     return render_template('nri_desk.html', inquiries=my_inquiries)
 
-# ==========================================
-# ADMIN-ONLY INQUIRIES DASHBOARD
-# ==========================================
+@app.route('/dataset_management')
+def dataset_management():
+    if session.get('role') != 'admin':
+        flash("Access Denied.", "danger")
+        return redirect(url_for('login'))
+    return render_template('dataset_management.html')
+
+@app.route('/audit_logs')
+def audit_logs():
+    if session.get('role') != 'admin':
+        flash("Access Denied.", "danger")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM audit_logs ORDER BY timestamp DESC')
+    logs = cursor.fetchall()
+    conn.close()
+    return render_template('audit_logs.html', logs=logs)
+
 @app.route('/admin/inquiries')
 def admin_inquiries():
     if session.get('role') != 'admin':
-        flash("Access Denied: Administrative privileges required.", "danger")
+        flash("Access Denied.", "danger")
         return redirect(url_for('login'))
 
     conn = get_db_connection()
@@ -185,16 +210,11 @@ def admin_inquiries():
     cursor.execute('SELECT * FROM nri_inquiries ORDER BY created_at DESC')
     all_inquiries = cursor.fetchall()
     conn.close()
-
-    log_event(session.get('user'), '/admin/inquiries', 'Viewed all NRI inquiries')
     return render_template('admin_inquiries.html', inquiries=all_inquiries)
 
 @app.route('/logout')
 def logout():
-    user = session.get('user', 'Guest')
-    log_event(user, '/logout', 'User logged out')
     session.clear()
-    flash('Logged out successfully.', 'info')
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
