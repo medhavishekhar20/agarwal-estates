@@ -1,5 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+import io
 import sqlite3
+import pandas as pd
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 
 app = Flask(__name__)
 app.secret_key = "agarwal_estates_secret_key"
@@ -276,7 +278,6 @@ def nri_desk():
         log_event(username, '/nri_desk', 'Submitted new NRI inquiry')
         flash("Your inquiry has been submitted successfully!", "success")
 
-    # Admins see all inquiries; regular users see only their own
     if session.get('role') == 'admin':
         cursor.execute('SELECT * FROM nri_inquiries ORDER BY created_at DESC')
     else:
@@ -299,12 +300,56 @@ def emi():
         return redirect(url_for('login'))
     return render_template('emi.html')
 
-@app.route('/dataset_management')
+@app.route('/dataset_management', methods=['GET', 'POST'])
 def dataset_management():
     if session.get('role') != 'admin':
         flash("Access Denied.", "danger")
         return redirect(url_for('login'))
-    return render_template('dataset_management.html')
+
+    table_html = None
+    row_count = 0
+    col_count = 0
+    columns = []
+
+    if request.method == 'POST':
+        if 'dataset_file' not in request.files:
+            flash("No file uploaded.", "danger")
+            return redirect(request.url)
+            
+        file = request.files['dataset_file']
+        
+        if file.filename == '':
+            flash("No file selected.", "danger")
+            return redirect(request.url)
+
+        if file and file.filename.endswith('.csv'):
+            try:
+                df = pd.read_csv(io.StringIO(file.stream.read().decode("utf-8", errors="ignore")))
+                
+                row_count = len(df)
+                col_count = len(df.columns)
+                columns = df.columns.tolist()
+                
+                table_html = df.to_html(
+                    classes='table table-striped table-hover table-bordered align-middle',
+                    index=False,
+                    na_rep='N/A'
+                )
+                
+                log_event(session.get('user'), '/dataset_management', f'Uploaded and viewed dataset: {file.filename}')
+                flash(f"Dataset '{file.filename}' loaded successfully!", "success")
+            except Exception as e:
+                flash(f"Error processing CSV file: {str(e)}", "danger")
+        else:
+            flash("Please upload a valid .csv file.", "warning")
+
+    return render_template(
+        'dataset_management.html', 
+        table_html=table_html, 
+        row_count=row_count, 
+        col_count=col_count,
+        columns=columns
+    )
 
 @app.route('/audit_logs')
 def audit_logs():
