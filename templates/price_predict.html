@@ -11,6 +11,7 @@
             <div class="col-md-6">
                 <label class="form-label fw-bold">Select Locality / Area</label>
                 <select name="location" class="form-select" required>
+                    <option value="" disabled selected>-- Select Locality --</option>
                     {% for loc in locations %}
                         <option value="{{ loc }}">{{ loc }}</option>
                     {% endfor %}
@@ -23,7 +24,7 @@
                 <input type="number" name="sqft" class="form-control" value="1200" min="100" max="50000" required>
             </div>
 
-            <!-- BHK Dropdown (1 to 10) -->
+            <!-- BHK Dropdown -->
             <div class="col-md-6">
                 <label class="form-label fw-bold">BHK (Bedrooms)</label>
                 <select name="bhk" class="form-select" required>
@@ -33,7 +34,7 @@
                 </select>
             </div>
 
-            <!-- Bathrooms Dropdown (1 to 10) -->
+            <!-- Bathrooms Dropdown -->
             <div class="col-md-6">
                 <label class="form-label fw-bold">Bathrooms</label>
                 <select name="bathrooms" class="form-select" required>
