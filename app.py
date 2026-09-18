@@ -1,16 +1,13 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3
-from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "agarwal_estates_secret_key"
 DB_NAME = "database.db"
 
-# ==========================================
-# HARDCODED PRE-BUILT ADMIN CREDENTIALS
-# ==========================================
-ADMIN_USERNAME = "admin_master"
-ADMIN_PIN = "1234"
+# Admin Credentials
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "adminpassword123"  # Change this to your preferred password
 
 def get_db_connection():
     conn = sqlite3.connect(DB_NAME)
@@ -21,17 +18,6 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Users Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'buyer'
-        )
-    ''')
-    
-    # Audit Logs Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS audit_logs (
             log_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,7 +28,6 @@ def init_db():
         )
     ''')
     
-    # NRI Inquiries Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS nri_inquiries (
             inquiry_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,18 +57,12 @@ def log_event(user, action_route, details):
     conn.commit()
     conn.close()
 
-# ==========================================
-# ROOT ROUTE
-# ==========================================
 @app.route('/')
 def home():
     if 'user' in session:
         return redirect(url_for('price_predict'))
     return redirect(url_for('login'))
 
-# ==========================================
-# AUTHENTICATION
-# ==========================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -92,8 +71,14 @@ def login():
         role = request.form.get('role')
 
         if role == 'admin':
-            flash("Admin login is disabled here. Use the secure portal link.", "danger")
-            return redirect(url_for('login'))
+            if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+                session['user'] = username
+                session['role'] = 'admin'
+                log_event(username, '/login', 'Admin logged in')
+                return redirect(url_for('price_predict'))
+            else:
+                flash("Invalid Admin username or password.", "danger")
+                return redirect(url_for('login'))
 
         session['user'] = username
         session['role'] = role
@@ -102,37 +87,19 @@ def login():
 
     return render_template('login.html')
 
-@app.route('/secret-admin-portal', methods=['GET', 'POST'])
-def secret_admin_login():
-    if request.method == 'POST':
-        entered_pin = request.form.get('admin_pin')
-        if entered_pin == ADMIN_PIN:
-            session['user'] = ADMIN_USERNAME
-            session['role'] = 'admin'
-            log_event(ADMIN_USERNAME, '/secret-admin-portal', 'Admin authenticated via master PIN')
-            return redirect(url_for('admin_inquiries'))
-        else:
-            log_event('UNKNOWN', '/secret-admin-portal', 'Failed Admin PIN attempt')
-            flash('Invalid Security PIN.', 'danger')
-
-    return render_template('admin_secret_login.html')
-
-# ==========================================
-# FEATURE ROUTES
-# ==========================================
-@app.route('/price_predict', methods=['GET', 'POST'])
+@app.route('/price_predict')
 def price_predict():
     if 'user' not in session:
         return redirect(url_for('login'))
     return render_template('price_predict.html')
 
-@app.route('/compare', methods=['GET', 'POST'])
+@app.route('/compare')
 def compare():
     if 'user' not in session:
         return redirect(url_for('login'))
     return render_template('compare.html')
 
-@app.route('/emi', methods=['GET', 'POST'])
+@app.route('/emi')
 def emi():
     if 'user' not in session:
         return redirect(url_for('login'))
@@ -198,19 +165,6 @@ def audit_logs():
     logs = cursor.fetchall()
     conn.close()
     return render_template('audit_logs.html', logs=logs)
-
-@app.route('/admin/inquiries')
-def admin_inquiries():
-    if session.get('role') != 'admin':
-        flash("Access Denied.", "danger")
-        return redirect(url_for('login'))
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM nri_inquiries ORDER BY created_at DESC')
-    all_inquiries = cursor.fetchall()
-    conn.close()
-    return render_template('admin_inquiries.html', inquiries=all_inquiries)
 
 @app.route('/logout')
 def logout():
