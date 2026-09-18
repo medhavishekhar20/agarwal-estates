@@ -5,7 +5,6 @@ app = Flask(__name__)
 app.secret_key = "agarwal_estates_secret_key"
 DB_NAME = "database.db"
 
-# Admin Credentials
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "adminpassword123"
 
@@ -63,13 +62,18 @@ def init_db():
         )
     ''')
     
+    # Migration safeguard for existing Render SQLite database
+    try:
+        cursor.execute("ALTER TABLE properties ADD COLUMN username TEXT NOT NULL DEFAULT 'admin'")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+        
     conn.commit()
     conn.close()
 
 init_db()
 
 def log_event(user, action_route, details):
-    # Fix "Anonymous" logs by falling back to session user or default to "admin"
     active_user = user if user else session.get('user', 'admin')
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -195,7 +199,7 @@ def add_to_portfolio():
     if 'user' not in session:
         return redirect(url_for('login'))
 
-    username = session.get('user')
+    username = session.get('user', 'admin')
     location = request.form.get('location')
     sqft = float(request.form.get('sqft', 0))
     bhk = int(request.form.get('bhk', 0))
@@ -220,7 +224,7 @@ def portfolio():
     if 'user' not in session:
         return redirect(url_for('login'))
 
-    username = session.get('user')
+    username = session.get('user', 'admin')
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -247,7 +251,9 @@ def portfolio():
         avg_sqft=formatted_avg_sqft
     )
 
+# Fix: Added aliases for both /nri-desk and /nri_desk to avoid 404 errors
 @app.route('/nri-desk', methods=['GET', 'POST'])
+@app.route('/nri_desk', methods=['GET', 'POST'])
 def nri_desk():
     if 'user' not in session:
         return redirect(url_for('login'))
@@ -261,7 +267,7 @@ def nri_desk():
         country = request.form.get('country')
         phone = request.form.get('phone')
         details = request.form.get('details')
-        username = session.get('user')
+        username = session.get('user', 'admin')
 
         cursor.execute('''
             INSERT INTO nri_inquiries (username, full_name, email, country, phone_number, inquiry_details)
@@ -269,14 +275,14 @@ def nri_desk():
         ''', (username, full_name, email, country, phone, details))
         
         conn.commit()
-        log_event(username, '/nri-desk', 'Submitted new NRI inquiry')
+        log_event(username, '/nri_desk', 'Submitted new NRI inquiry')
         flash("Your inquiry has been submitted successfully!", "success")
 
     cursor.execute('''
         SELECT * FROM nri_inquiries 
         WHERE username = ? 
         ORDER BY created_at DESC
-    ''', (session.get('user'),))
+    ''', (session.get('user', 'admin'),))
     my_inquiries = cursor.fetchall()
     conn.close()
 
