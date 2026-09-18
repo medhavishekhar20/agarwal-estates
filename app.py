@@ -1,4 +1,5 @@
 import io
+import os
 import sqlite3
 import pandas as pd
 from flask import Flask, render_template, request, redirect, url_for, session, flash
@@ -52,10 +53,23 @@ def init_db():
         )
     ''')
     
+    # Portfolio properties table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS properties (
             property_id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
+            location TEXT NOT NULL,
+            sqft REAL NOT NULL,
+            bhk INTEGER NOT NULL,
+            bathrooms INTEGER NOT NULL,
+            price REAL NOT NULL
+        )
+    ''')
+
+    # Global dataset properties table (for comparison directly from datasets)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS dataset_properties (
+            dataset_id INTEGER PRIMARY KEY AUTOINCREMENT,
             location TEXT NOT NULL,
             sqft REAL NOT NULL,
             bhk INTEGER NOT NULL,
@@ -71,6 +85,68 @@ def init_db():
 
     cursor.execute("UPDATE audit_logs SET user = 'admin' WHERE user = 'Anonymous' OR user IS NULL OR user = ''")
         
+    conn.commit()
+    conn.close()
+
+    # Pre-populate dataset_properties from local file if empty
+    seed_dataset_from_file()
+
+def seed_dataset_from_file():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) as count FROM dataset_properties")
+    count = cursor.fetchone()['count']
+    
+    if count == 0:
+        file_path = "Bengaluru_House_Data.csv"
+        if os.path.exists(file_path):
+            try:
+                df = pd.read_csv(file_path)
+                populate_dataset_table(df)
+            except Exception as e:
+                print(f"Error seeding dataset: {e}")
+    conn.close()
+
+def populate_dataset_table(df):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM dataset_properties")  # Refresh existing records
+
+    # Normalize standard dataset column names
+    df.columns = [c.strip().lower() for c in df.columns]
+
+    for _, row in df.iterrows():
+        try:
+            location = str(row.get('location', 'Unknown')).strip()
+            
+            # Extract square feet
+            raw_sqft = str(row.get('total_sqft', 0))
+            if '-' in raw_sqft:
+                parts = raw_sqft.split('-')
+                sqft = (float(parts[0].strip()) + float(parts[1].strip())) / 2
+            else:
+                sqft = float(raw_sqft)
+
+            # Extract BHK from size/bhk column
+            raw_size = str(row.get('size', '0'))
+            bhk = int(raw_size.split()[0]) if raw_size.split()[0].isdigit() else 0
+
+            # Extract Bathrooms
+            bath = row.get('bath', 0)
+            bathrooms = int(bath) if pd.notnull(bath) else 0
+
+            # Price in Lakhs converted to full INR value
+            price_lakhs = float(row.get('price', 0))
+            price = price_lakhs * 100000
+
+            if location and sqft > 0 and price > 0:
+                cursor.execute('''
+                    INSERT INTO dataset_properties (location, sqft, bhk, bathrooms, price)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (location, sqft, bhk, bathrooms, price))
+        except Exception:
+            continue
+
     conn.commit()
     conn.close()
 
@@ -165,7 +241,7 @@ def price_predict():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT location FROM properties ORDER BY location ASC")
+        cursor.execute("SELECT DISTINCT location FROM dataset_properties ORDER BY location ASC")
         rows = cursor.fetchall()
         conn.close()
         locations = [row['location'] for row in rows if row['location']]
@@ -299,12 +375,9 @@ def compare():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    if session.get('role') == 'admin':
-        cursor.execute("SELECT * FROM properties")
-    else:
-        cursor.execute("SELECT * FROM properties WHERE username = ?", (username,))
-    
-    user_properties = cursor.fetchall()
+    # Pull dataset properties to compare directly from the dataset
+    cursor.execute("SELECT dataset_id AS property_id, location, sqft, bhk, bathrooms, price FROM dataset_properties LIMIT 200")
+    available_properties = cursor.fetchall()
 
     prop1 = None
     prop2 = None
@@ -314,18 +387,18 @@ def compare():
         prop2_id = request.form.get('prop2_id')
 
         if prop1_id:
-            cursor.execute("SELECT * FROM properties WHERE property_id = ?", (prop1_id,))
+            cursor.execute("SELECT dataset_id AS property_id, location, sqft, bhk, bathrooms, price FROM dataset_properties WHERE dataset_id = ?", (prop1_id,))
             prop1 = cursor.fetchone()
 
         if prop2_id:
-            cursor.execute("SELECT * FROM properties WHERE property_id = ?", (prop2_id,))
+            cursor.execute("SELECT dataset_id AS property_id, location, sqft, bhk, bathrooms, price FROM dataset_properties WHERE dataset_id = ?", (prop2_id,))
             prop2 = cursor.fetchone()
 
-        log_event(username, '/compare', f'Compared properties ID {prop1_id} and ID {prop2_id}')
+        log_event(username, '/compare', f'Compared dataset properties ID {prop1_id} and ID {prop2_id}')
 
     conn.close()
 
-    return render_template('compare.html', properties=user_properties, prop1=prop1, prop2=prop2)
+    return render_template('compare.html', properties=available_properties, prop1=prop1, prop2=prop2)
 
 @app.route('/emi')
 def emi():
@@ -357,8 +430,12 @@ def dataset_management():
 
         if file and file.filename.endswith('.csv'):
             try:
-                df = pd.read_csv(io.StringIO(file.stream.read().decode("utf-8", errors="ignore")))
+                raw_bytes = file.stream.read()
+                df = pd.read_csv(io.StringIO(raw_bytes.decode("utf-8", errors="ignore")))
                 
+                # Populate database table so updated dataset is used across the site
+                populate_dataset_table(df)
+
                 row_count = len(df)
                 col_count = len(df.columns)
                 columns = df.columns.tolist()
@@ -371,7 +448,7 @@ def dataset_management():
                 
                 current_user = session.get('user', 'admin')
                 log_event(current_user, '/dataset_management', f'Uploaded dataset: {file.filename}')
-                flash(f"Dataset '{file.filename}' loaded successfully!", "success")
+                flash(f"Dataset '{file.filename}' loaded into application successfully!", "success")
             except Exception as e:
                 flash(f"Error processing CSV file: {str(e)}", "danger")
         else:
