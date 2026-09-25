@@ -187,7 +187,7 @@ def login():
                 flash("Invalid Admin username or password.", "danger")
                 return redirect(url_for('login'))
 
-        # 2. Handle Regular User / Buyer / Employer Authentication
+        # 2. Handle Regular User / Buyer / Employee Authentication
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
@@ -336,30 +336,36 @@ def nri_desk():
     if 'user' not in session:
         return redirect(url_for('login'))
 
+    user_role = session.get('role', 'buyer')
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    if request.method == 'POST' and session.get('role') != 'admin':
-        full_name = request.form.get('full_name')
-        email = request.form.get('email')
-        country = request.form.get('country')
-        phone = request.form.get('phone')
-        details = request.form.get('details')
-        username = session.get('user', 'admin')
+    # Handle form submission (Only buyers/clients can submit inquiries)
+    if request.method == 'POST':
+        if user_role in ['admin', 'employee']:
+            flash("Admins and Employees can view inquiries but cannot submit the form.", "warning")
+        else:
+            full_name = request.form.get('full_name')
+            email = request.form.get('email')
+            country = request.form.get('country')
+            phone = request.form.get('phone')
+            details = request.form.get('details')
+            username = session.get('user', 'buyer')
 
-        cursor.execute('''
-            INSERT INTO nri_inquiries (username, full_name, email, country, phone_number, inquiry_details)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (username, full_name, email, country, phone, details))
-        
-        conn.commit()
-        log_event(username, '/nri_desk', 'Submitted new NRI inquiry')
-        flash("Your inquiry has been submitted successfully!", "success")
+            cursor.execute('''
+                INSERT INTO nri_inquiries (username, full_name, email, country, phone_number, inquiry_details)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (username, full_name, email, country, phone, details))
+            
+            conn.commit()
+            log_event(username, '/nri_desk', 'Submitted new NRI inquiry')
+            flash("Your inquiry has been submitted successfully!", "success")
 
-    if session.get('role') == 'admin':
+    # Display inquiries: Admin & Employees see ALL inquiries; Buyers see only their own
+    if user_role in ['admin', 'employee', 'employer']:
         cursor.execute('SELECT * FROM nri_inquiries ORDER BY created_at DESC')
     else:
-        cursor.execute('SELECT * FROM nri_inquiries WHERE username = ? ORDER BY created_at DESC', (session.get('user', 'admin'),))
+        cursor.execute('SELECT * FROM nri_inquiries WHERE username = ? ORDER BY created_at DESC', (session.get('user'),))
 
     my_inquiries = cursor.fetchall()
     conn.close()
@@ -375,7 +381,7 @@ def compare():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Pull dataset properties to compare directly from the dataset
+    # Pull dataset properties to compare directly from dataset_properties
     cursor.execute("SELECT dataset_id AS property_id, location, sqft, bhk, bathrooms, price FROM dataset_properties LIMIT 200")
     available_properties = cursor.fetchall()
 
