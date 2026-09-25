@@ -53,7 +53,6 @@ def init_db():
         )
     ''')
     
-    # Portfolio properties table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS properties (
             property_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,7 +65,6 @@ def init_db():
         )
     ''')
 
-    # Global dataset properties table (for comparison directly from datasets)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS dataset_properties (
             dataset_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,7 +86,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-    # Pre-populate dataset_properties from local file if empty
     seed_dataset_from_file()
 
 def seed_dataset_from_file():
@@ -110,16 +107,14 @@ def seed_dataset_from_file():
 def populate_dataset_table(df):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM dataset_properties")  # Refresh existing records
+    cursor.execute("DELETE FROM dataset_properties")
 
-    # Normalize standard dataset column names
     df.columns = [c.strip().lower() for c in df.columns]
 
     for _, row in df.iterrows():
         try:
             location = str(row.get('location', 'Unknown')).strip()
             
-            # Extract square feet
             raw_sqft = str(row.get('total_sqft', 0))
             if '-' in raw_sqft:
                 parts = raw_sqft.split('-')
@@ -127,15 +122,12 @@ def populate_dataset_table(df):
             else:
                 sqft = float(raw_sqft)
 
-            # Extract BHK from size/bhk column
             raw_size = str(row.get('size', '0'))
             bhk = int(raw_size.split()[0]) if raw_size.split()[0].isdigit() else 0
 
-            # Extract Bathrooms
             bath = row.get('bath', 0)
             bathrooms = int(bath) if pd.notnull(bath) else 0
 
-            # Price in Lakhs converted to full INR value
             price_lakhs = float(row.get('price', 0))
             price = price_lakhs * 100000
 
@@ -176,7 +168,6 @@ def login():
         password = request.form.get('password')
         role = request.form.get('role')
 
-        # 1. Handle Admin Authentication
         if role == 'admin':
             if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
                 session['user'] = ADMIN_USERNAME
@@ -187,7 +178,6 @@ def login():
                 flash("Invalid Admin username or password.", "danger")
                 return redirect(url_for('login'))
 
-        # 2. Handle Regular User / Buyer / Employee Authentication
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
@@ -340,17 +330,18 @@ def nri_desk():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Handle form submission (Only buyers/clients can submit inquiries)
+    # Form Submission Logic
     if request.method == 'POST':
-        if user_role in ['admin', 'employee']:
-            flash("Admins and Employees can view inquiries but cannot submit the form.", "warning")
+        # Strictly block Admin and Employees from submitting inquiries
+        if user_role in ['admin', 'employee', 'employer']:
+            flash("Admins and employees cannot submit NRI inquiries. You can only view submitted inquiries below.", "warning")
         else:
             full_name = request.form.get('full_name')
             email = request.form.get('email')
             country = request.form.get('country')
             phone = request.form.get('phone')
             details = request.form.get('details')
-            username = session.get('user', 'buyer')
+            username = session.get('user')
 
             cursor.execute('''
                 INSERT INTO nri_inquiries (username, full_name, email, country, phone_number, inquiry_details)
@@ -361,7 +352,7 @@ def nri_desk():
             log_event(username, '/nri_desk', 'Submitted new NRI inquiry')
             flash("Your inquiry has been submitted successfully!", "success")
 
-    # Display inquiries: Admin & Employees see ALL inquiries; Buyers see only their own
+    # Display Logic: Admin & Employees view ALL inquiries; Users/Buyers view only their own
     if user_role in ['admin', 'employee', 'employer']:
         cursor.execute('SELECT * FROM nri_inquiries ORDER BY created_at DESC')
     else:
@@ -381,7 +372,6 @@ def compare():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Pull dataset properties to compare directly from dataset_properties
     cursor.execute("SELECT dataset_id AS property_id, location, sqft, bhk, bathrooms, price FROM dataset_properties LIMIT 200")
     available_properties = cursor.fetchall()
 
@@ -439,7 +429,6 @@ def dataset_management():
                 raw_bytes = file.stream.read()
                 df = pd.read_csv(io.StringIO(raw_bytes.decode("utf-8", errors="ignore")))
                 
-                # Populate database table so updated dataset is used across the site
                 populate_dataset_table(df)
 
                 row_count = len(df)
