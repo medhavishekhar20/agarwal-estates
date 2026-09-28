@@ -15,57 +15,76 @@
         </div>
     </div>
 
-    <!-- Flash Messages (Thank You Banner) -->
+    <!-- Get flashed messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
+        <!-- SUCCESS STATE: When form has just been submitted -->
         {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i><strong>{{ message }}</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
+          {% if category == 'success' and session.get('role') not in ['admin', 'employee', 'employer'] %}
+            <div class="card shadow-lg border-0 my-4 text-center">
+                <div class="card-body p-5">
+                    <div class="mb-3 text-success">
+                        <i class="bi bi-check-circle-fill display-1"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark mb-2">Thank You!</h3>
+                    <p class="fs-5 text-muted mb-4">{{ message }}</p>
+                    <a href="{{ url_for('user_inquiries') }}" class="btn btn-outline-success btn-lg px-4 fs-6 fw-bold">
+                        <i class="bi bi-plus-circle me-1"></i> Submit Another Inquiry
+                    </a>
+                </div>
+            </div>
+          {% else %}
+            <!-- Standard Alert Banner -->
+            <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4" role="alert">
+                <i class="bi bi-info-circle-fill me-2"></i><strong>{{ message }}</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endif %}
         {% endfor %}
+      {% else %}
+
+        <!-- NORMAL STATE: Submission Form (Visible ONLY when no success message is active) -->
+        {% if session.get('role') not in ['admin', 'employee', 'employer'] %}
+        <div class="card shadow-lg mb-5 border-0">
+            <div class="card-header bg-success text-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-pencil-square me-2"></i>Submit an Inquiry</h5>
+            </div>
+            <div class="card-body p-4">
+                <form action="{{ url_for('user_inquiries') }}" method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="full_name" class="form-label fw-semibold">Full Name</label>
+                            <input type="text" class="form-control" id="full_name" name="full_name" placeholder="Enter your full name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="email" class="form-label fw-semibold">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="country" class="form-label fw-semibold">Country / Location</label>
+                            <input type="text" class="form-control" id="country" name="country" placeholder="e.g., India, USA, UAE" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label fw-semibold">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" placeholder="+91 9876543210" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="details" class="form-label fw-semibold">Inquiry Details</label>
+                            <textarea class="form-control" id="details" name="details" rows="4" placeholder="Describe your requirement, preferred budget, locality, or questions..." required></textarea>
+                        </div>
+                        <div class="col-12 text-end mt-4">
+                            <button type="submit" class="btn btn-success btn-lg px-4 fs-6 fw-bold shadow-sm">
+                                <i class="bi bi-send-fill me-1"></i> Send Inquiry
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
       {% endif %}
     {% endwith %}
-
-    <!-- Submission Form (ONLY VISIBLE TO USERS) -->
-    {% if session.get('role') not in ['admin', 'employee', 'employer'] %}
-    <div class="card shadow-lg mb-5 border-0">
-        <div class="card-header bg-success text-white py-3">
-            <h5 class="mb-0 fw-bold"><i class="bi bi-pencil-square me-2"></i>Submit an Inquiry</h5>
-        </div>
-        <div class="card-body p-4">
-            <form action="{{ url_for('user_inquiries') }}" method="POST">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="full_name" class="form-label fw-semibold">Full Name</label>
-                        <input type="text" class="form-control" id="full_name" name="full_name" placeholder="Enter your full name" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="email" class="form-label fw-semibold">Email Address</label>
-                        <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="country" class="form-label fw-semibold">Country / Location</label>
-                        <input type="text" class="form-control" id="country" name="country" placeholder="e.g., India, USA, UAE" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="phone" class="form-label fw-semibold">Phone Number</label>
-                        <input type="tel" class="form-control" id="phone" name="phone" placeholder="+91 9876543210" required>
-                    </div>
-                    <div class="col-12">
-                        <label for="details" class="form-label fw-semibold">Inquiry Details</label>
-                        <textarea class="form-control" id="details" name="details" rows="4" placeholder="Describe your requirement, preferred budget, locality, or questions..." required></textarea>
-                    </div>
-                    <div class="col-12 text-end mt-4">
-                        <button type="submit" class="btn btn-success btn-lg px-4 fs-6 fw-bold shadow-sm">
-                            <i class="bi bi-send-fill me-1"></i> Send Inquiry
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-    {% endif %}
 
     <!-- Inquiries Table (ONLY VISIBLE TO ADMINS AND EMPLOYEES) -->
     {% if session.get('role') in ['admin', 'employee', 'employer'] %}
