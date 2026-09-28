@@ -75,6 +75,19 @@ def init_db():
             price REAL NOT NULL
         )
     ''')
+
+    # Seed permanent default accounts so resets never lock you out
+    default_users = [
+        ('admin', 'adminpassword123', 'admin'),
+        ('employee1', 'employee123', 'employee'),
+        ('testbuyer', 'buyer123', 'buyer')
+    ]
+
+    for user, pwd, role in default_users:
+        cursor.execute('''
+            INSERT OR IGNORE INTO users (username, password, role)
+            VALUES (?, ?, ?)
+        ''', (user, pwd, role))
     
     try:
         cursor.execute("ALTER TABLE properties ADD COLUMN username TEXT NOT NULL DEFAULT 'admin'")
@@ -361,11 +374,10 @@ def user_inquiries():
         conn.commit()
 
         log_event(username, '/user_inquiries', 'Submitted new inquiry')
-        flash("Thank you for reaching out! Your inquiry has been successfully submitted. Our team will contact you shortly.", "success")
+        flash("Thank you for reaching out! Your inquiry has been submitted successfully. Our team will contact you shortly.", "success")
         conn.close()
         return redirect(url_for('user_inquiries'))
 
-    # If Admin or Employee: fetch all inquiries for review
     my_inquiries = []
     if user_role in ['admin', 'employee', 'employer']:
         cursor.execute('SELECT * FROM user_inquiries ORDER BY created_at DESC')
