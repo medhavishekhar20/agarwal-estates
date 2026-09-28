@@ -32,7 +32,17 @@
                         <li class="nav-item"><a class="nav-link" href="/price_predict">Predict Price</a></li>
                         <li class="nav-item"><a class="nav-link" href="/compare">Compare</a></li>
                         <li class="nav-item"><a class="nav-link" href="/emi">EMI Calculator</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/nri_desk">NRI Desk</a></li>
+                        
+                        <!-- DYNAMIC INQUIRY LINK BASED ON USER ROLE -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('user_inquiries') }}">
+                                {% if session.get('role') in ['admin', 'employee', 'employer'] %}
+                                    User Inquiries
+                                {% else %}
+                                    Ask Inquiry
+                                {% endif %}
+                            </a>
+                        </li>
 
                         <!-- ADMIN-ONLY FEATURES -->
                         {% if session.get('role') == 'admin' %}
