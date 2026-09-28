@@ -40,7 +40,7 @@ def init_db():
     ''')
     
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS nri_inquiries (
+        CREATE TABLE IF NOT EXISTS user_inquiries (
             inquiry_id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
             full_name TEXT NOT NULL,
@@ -320,9 +320,10 @@ def portfolio():
         avg_sqft=formatted_avg_sqft
     )
 
+@app.route('/user_inquiries', methods=['GET', 'POST'])
 @app.route('/nri-desk', methods=['GET', 'POST'])
 @app.route('/nri_desk', methods=['GET', 'POST'])
-def nri_desk():
+def user_inquiries():
     if 'user' not in session:
         return redirect(url_for('login'))
 
@@ -334,7 +335,7 @@ def nri_desk():
     if request.method == 'POST':
         # Strictly block Admin and Employees from submitting inquiries
         if user_role in ['admin', 'employee', 'employer']:
-            flash("Admins and employees cannot submit NRI inquiries. You can only view submitted inquiries below.", "warning")
+            flash("Admins and employees cannot submit inquiries. You can only view submitted inquiries below.", "warning")
         else:
             full_name = request.form.get('full_name')
             email = request.form.get('email')
@@ -343,25 +344,40 @@ def nri_desk():
             details = request.form.get('details')
             username = session.get('user')
 
-            cursor.execute('''
-                INSERT INTO nri_inquiries (username, full_name, email, country, phone_number, inquiry_details)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (username, full_name, email, country, phone, details))
+            try:
+                cursor.execute('''
+                    INSERT INTO user_inquiries (username, full_name, email, country, phone_number, inquiry_details)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (username, full_name, email, country, phone, details))
+            except sqlite3.OperationalError:
+                # Fallback to nri_inquiries if old table exists
+                cursor.execute('''
+                    INSERT INTO nri_inquiries (username, full_name, email, country, phone_number, inquiry_details)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (username, full_name, email, country, phone, details))
             
             conn.commit()
-            log_event(username, '/nri_desk', 'Submitted new NRI inquiry')
+            log_event(username, '/user_inquiries', 'Submitted new user inquiry')
             flash("Your inquiry has been submitted successfully!", "success")
 
     # Display Logic: Admin & Employees view ALL inquiries; Users/Buyers view only their own
-    if user_role in ['admin', 'employee', 'employer']:
-        cursor.execute('SELECT * FROM nri_inquiries ORDER BY created_at DESC')
-    else:
-        cursor.execute('SELECT * FROM nri_inquiries WHERE username = ? ORDER BY created_at DESC', (session.get('user'),))
+    try:
+        if user_role in ['admin', 'employee', 'employer']:
+            cursor.execute('SELECT * FROM user_inquiries ORDER BY created_at DESC')
+        else:
+            cursor.execute('SELECT * FROM user_inquiries WHERE username = ? ORDER BY created_at DESC', (session.get('user'),))
+        my_inquiries = cursor.fetchall()
+    except sqlite3.OperationalError:
+        # Fallback to old table if user_inquiries isn't created yet
+        if user_role in ['admin', 'employee', 'employer']:
+            cursor.execute('SELECT * FROM nri_inquiries ORDER BY created_at DESC')
+        else:
+            cursor.execute('SELECT * FROM nri_inquiries WHERE username = ? ORDER BY created_at DESC', (session.get('user'),))
+        my_inquiries = cursor.fetchall()
 
-    my_inquiries = cursor.fetchall()
     conn.close()
 
-    return render_template('nri_desk.html', inquiries=my_inquiries)
+    return render_template('user_inquiries.html', inquiries=my_inquiries)
 
 @app.route('/compare', methods=['GET', 'POST'])
 def compare():
