@@ -385,9 +385,9 @@ def user_inquiries():
     conn.close()
 
     try:
-        return render_template('nri_desk.html', inquiries=my_inquiries)
-    except Exception:
         return render_template('user_inquiries.html', inquiries=my_inquiries)
+    except Exception:
+        return render_template('nri_desk.html', inquiries=my_inquiries)
 
 @app.route('/update_inquiry_status', methods=['POST'])
 def update_inquiry_status():
