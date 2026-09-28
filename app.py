@@ -76,7 +76,6 @@ def init_db():
         )
     ''')
 
-    # Seed permanent default accounts so resets never lock you out
     default_users = [
         ('admin', 'adminpassword123', 'admin'),
         ('employee1', 'employee123', 'employee'),
@@ -389,6 +388,25 @@ def user_inquiries():
         return render_template('nri_desk.html', inquiries=my_inquiries)
     except Exception:
         return render_template('user_inquiries.html', inquiries=my_inquiries)
+
+@app.route('/update_inquiry_status', methods=['POST'])
+def update_inquiry_status():
+    if session.get('role') not in ['admin', 'employee', 'employer']:
+        flash("Unauthorized action.", "danger")
+        return redirect(url_for('login'))
+
+    inquiry_id = request.form.get('inquiry_id')
+    new_status = request.form.get('status')
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE user_inquiries SET status = ? WHERE inquiry_id = ?", (new_status, inquiry_id))
+    conn.commit()
+    conn.close()
+
+    log_event(session.get('user'), '/update_inquiry_status', f'Updated Inquiry #{inquiry_id} status to {new_status}')
+    flash(f"Inquiry #{inquiry_id} status updated to {new_status}!", "success")
+    return redirect(url_for('user_inquiries'))
 
 @app.route('/compare', methods=['GET', 'POST'])
 def compare():
