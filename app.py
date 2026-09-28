@@ -329,6 +329,24 @@ def user_inquiries():
 
     user_role = session.get('role', 'buyer')
 
+    # Guard: Create table automatically on Render if missing
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_inquiries (
+            inquiry_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            full_name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            country TEXT NOT NULL,
+            phone_number TEXT NOT NULL,
+            inquiry_details TEXT NOT NULL,
+            status TEXT DEFAULT 'Pending',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+
     # Form Submission Logic
     if request.method == 'POST':
         if user_role in ['admin', 'employee', 'employer']:
@@ -341,8 +359,6 @@ def user_inquiries():
             details = request.form.get('details')
             username = session.get('user')
 
-            conn = get_db_connection()
-            cursor = conn.cursor()
             try:
                 cursor.execute('''
                     INSERT INTO user_inquiries (username, full_name, email, country, phone_number, inquiry_details)
@@ -355,17 +371,13 @@ def user_inquiries():
                     VALUES (?, ?, ?, ?, ?, ?)
                 ''', (username, full_name, email, country, phone, details))
                 conn.commit()
-            finally:
-                conn.close()
 
             log_event(username, '/user_inquiries', 'Submitted new user inquiry')
             flash("Your inquiry has been submitted successfully!", "success")
-            
+            conn.close()
             return redirect(url_for('user_inquiries'))
 
-    # Display Logic: Admins & Employees view ALL inquiries; Users view only their own
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    # Retrieve Inquiries
     try:
         if user_role in ['admin', 'employee', 'employer']:
             cursor.execute('SELECT * FROM user_inquiries ORDER BY created_at DESC')
@@ -381,7 +393,11 @@ def user_inquiries():
     finally:
         conn.close()
 
-    return render_template('user_inquiries.html', inquiries=my_inquiries)
+    # Fail-safe template rendering: tries user_inquiries.html first, falls back to nri_desk.html
+    try:
+        return render_template('user_inquiries.html', inquiries=my_inquiries)
+    except Exception:
+        return render_template('nri_desk.html', inquiries=my_inquiries)
 
 @app.route('/compare', methods=['GET', 'POST'])
 def compare():
