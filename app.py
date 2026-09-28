@@ -329,7 +329,6 @@ def user_inquiries():
 
     user_role = session.get('role', 'buyer')
 
-    # Guard: Create table automatically on Render if missing
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -347,7 +346,6 @@ def user_inquiries():
     ''')
     conn.commit()
 
-    # Form Submission Logic
     if request.method == 'POST':
         if user_role in ['admin', 'employee', 'employer']:
             flash("Admins and employees cannot submit inquiries. You can only view submitted inquiries below.", "warning")
@@ -359,41 +357,25 @@ def user_inquiries():
             details = request.form.get('details')
             username = session.get('user')
 
-            try:
-                cursor.execute('''
-                    INSERT INTO user_inquiries (username, full_name, email, country, phone_number, inquiry_details)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (username, full_name, email, country, phone, details))
-                conn.commit()
-            except sqlite3.OperationalError:
-                cursor.execute('''
-                    INSERT INTO nri_inquiries (username, full_name, email, country, phone_number, inquiry_details)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (username, full_name, email, country, phone, details))
-                conn.commit()
+            cursor.execute('''
+                INSERT INTO user_inquiries (username, full_name, email, country, phone_number, inquiry_details)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (username, full_name, email, country, phone, details))
+            conn.commit()
 
             log_event(username, '/user_inquiries', 'Submitted new user inquiry')
             flash("Your inquiry has been submitted successfully!", "success")
             conn.close()
             return redirect(url_for('user_inquiries'))
 
-    # Retrieve Inquiries
-    try:
-        if user_role in ['admin', 'employee', 'employer']:
-            cursor.execute('SELECT * FROM user_inquiries ORDER BY created_at DESC')
-        else:
-            cursor.execute('SELECT * FROM user_inquiries WHERE username = ? ORDER BY created_at DESC', (session.get('user'),))
-        my_inquiries = cursor.fetchall()
-    except sqlite3.OperationalError:
-        if user_role in ['admin', 'employee', 'employer']:
-            cursor.execute('SELECT * FROM nri_inquiries ORDER BY created_at DESC')
-        else:
-            cursor.execute('SELECT * FROM nri_inquiries WHERE username = ? ORDER BY created_at DESC', (session.get('user'),))
-        my_inquiries = cursor.fetchall()
-    finally:
-        conn.close()
+    if user_role in ['admin', 'employee', 'employer']:
+        cursor.execute('SELECT * FROM user_inquiries ORDER BY created_at DESC')
+    else:
+        cursor.execute('SELECT * FROM user_inquiries WHERE username = ? ORDER BY created_at DESC', (session.get('user'),))
+    
+    my_inquiries = cursor.fetchall()
+    conn.close()
 
-    # Fail-safe template rendering: tries user_inquiries.html first, falls back to nri_desk.html
     try:
         return render_template('user_inquiries.html', inquiries=my_inquiries)
     except Exception:
