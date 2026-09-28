@@ -347,39 +347,36 @@ def user_inquiries():
     conn.commit()
 
     if request.method == 'POST':
-        if user_role in ['admin', 'employee', 'employer']:
-            flash("Admins and employees cannot submit inquiries. You can only view submitted inquiries below.", "warning")
-        else:
-            full_name = request.form.get('full_name')
-            email = request.form.get('email')
-            country = request.form.get('country')
-            phone = request.form.get('phone')
-            details = request.form.get('details')
-            username = session.get('user')
+        full_name = request.form.get('full_name')
+        email = request.form.get('email')
+        country = request.form.get('country')
+        phone = request.form.get('phone')
+        details = request.form.get('details')
+        username = session.get('user', 'guest')
 
-            cursor.execute('''
-                INSERT INTO user_inquiries (username, full_name, email, country, phone_number, inquiry_details)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (username, full_name, email, country, phone, details))
-            conn.commit()
+        cursor.execute('''
+            INSERT INTO user_inquiries (username, full_name, email, country, phone_number, inquiry_details)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (username, full_name, email, country, phone, details))
+        conn.commit()
 
-            log_event(username, '/user_inquiries', 'Submitted new user inquiry')
-            flash("Your inquiry has been submitted successfully!", "success")
-            conn.close()
-            return redirect(url_for('user_inquiries'))
+        log_event(username, '/user_inquiries', 'Submitted new inquiry')
+        flash("Thank you for reaching out! Your inquiry has been successfully submitted. Our team will contact you shortly.", "success")
+        conn.close()
+        return redirect(url_for('user_inquiries'))
 
+    # If Admin or Employee: fetch all inquiries for review
+    my_inquiries = []
     if user_role in ['admin', 'employee', 'employer']:
         cursor.execute('SELECT * FROM user_inquiries ORDER BY created_at DESC')
-    else:
-        cursor.execute('SELECT * FROM user_inquiries WHERE username = ? ORDER BY created_at DESC', (session.get('user'),))
-    
-    my_inquiries = cursor.fetchall()
+        my_inquiries = cursor.fetchall()
+
     conn.close()
 
     try:
-        return render_template('user_inquiries.html', inquiries=my_inquiries)
-    except Exception:
         return render_template('nri_desk.html', inquiries=my_inquiries)
+    except Exception:
+        return render_template('user_inquiries.html', inquiries=my_inquiries)
 
 @app.route('/compare', methods=['GET', 'POST'])
 def compare():
