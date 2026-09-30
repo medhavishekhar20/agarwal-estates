@@ -335,7 +335,15 @@ def price_predict():
         "Banashankari", "Marathahalli", "Yelahanka", "Sarjapur Road"
     ]
 
+    # Show only the localities the model was trained on, so that every
+    # choice in the drop-down gives its own estimate.
+    model_locations = sorted(
+        c for c in (FEATURES or []) if c not in ("total_sqft", "bath", "bhk", "other")
+    )
+
     try:
+        if model_locations:
+            raise StopIteration
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT DISTINCT location FROM dataset_properties ORDER BY location ASC")
@@ -344,6 +352,8 @@ def price_predict():
         locations = [row['location'] for row in rows if row['location']]
         if not locations:
             locations = default_locations
+    except StopIteration:
+        locations = model_locations
     except Exception:
         locations = default_locations
 
