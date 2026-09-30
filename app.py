@@ -1,8 +1,11 @@
 import io
 import os
 import sqlite3
+import pickle
+import numpy as np
 import pandas as pd
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from sklearn.linear_model import LinearRegression
 
 app = Flask(__name__)
 app.secret_key = "agarwal_estates_secret_key"
@@ -10,6 +13,98 @@ DB_NAME = "database.db"
 
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "adminpassword123"
+
+# ------------------------------------------------------------------
+# MACHINE LEARNING MODEL
+# The model is loaded from model.pkl if that file exists. If it does
+# not exist, a Linear Regression model is trained here from
+# Bengaluru_House_Data.csv, using the same cleaning steps as
+# train_model.py. If both fail, the old formula is used so that the
+# website never crashes.
+# ------------------------------------------------------------------
+MODEL = None
+FEATURES = None
+MODEL_SOURCE = "formula (model not available)"
+
+
+def _convert_sqft(x):
+    try:
+        return float(x)
+    except (ValueError, TypeError):
+        pass
+    tokens = str(x).split("-")
+    if len(tokens) == 2:
+        try:
+            return (float(tokens[0].strip()) + float(tokens[1].strip())) / 2
+        except ValueError:
+            return None
+    return None
+
+
+def _train_model_from_csv(file_path="Bengaluru_House_Data.csv"):
+    df = pd.read_csv(file_path)
+    df = df[["location", "size", "total_sqft", "bath", "price"]].copy()
+    df.dropna(subset=["size"], inplace=True)
+    df["bhk"] = df["size"].apply(lambda x: int(str(x).split(" ")[0]))
+    df["total_sqft"] = df["total_sqft"].apply(_convert_sqft)
+    df.dropna(subset=["total_sqft", "bath", "price"], inplace=True)
+    df = df[df["total_sqft"] / df["bhk"] >= 300]
+    df = df[df["bath"] <= df["bhk"] + 2]
+    df["location"] = df["location"].apply(lambda x: str(x).strip())
+    counts = df["location"].value_counts()
+    rare = counts[counts <= 10].index
+    df["location"] = df["location"].apply(lambda x: "other" if x in rare else x)
+    df["price_per_sqft"] = df["price"] * 100000 / df["total_sqft"]
+    parts = []
+    for _, sub in df.groupby("location"):
+        m = np.mean(sub.price_per_sqft)
+        s = np.std(sub.price_per_sqft)
+        parts.append(sub[(sub.price_per_sqft > (m - s)) & (sub.price_per_sqft <= (m + s))])
+    df = pd.concat(parts, ignore_index=True)
+    dummies = pd.get_dummies(df["location"])
+    X = pd.concat([df[["total_sqft", "bath", "bhk"]], dummies], axis=1)
+    y = df["price"]
+    model = LinearRegression()
+    model.fit(X, y)
+    return model, list(X.columns)
+
+
+def load_model():
+    global MODEL, FEATURES, MODEL_SOURCE
+    try:
+        if os.path.exists("model.pkl") and os.path.exists("model_meta.json"):
+            import json
+            with open("model.pkl", "rb") as f:
+                MODEL = pickle.load(f)
+            with open("model_meta.json") as f:
+                FEATURES = json.load(f)["feature_columns"]
+            MODEL_SOURCE = "model.pkl"
+        else:
+            MODEL, FEATURES = _train_model_from_csv()
+            MODEL_SOURCE = "trained at start-up from Bengaluru_House_Data.csv"
+    except Exception as e:
+        print(f"Model not available, using formula instead: {e}")
+        MODEL, FEATURES = None, None
+        MODEL_SOURCE = "formula (model not available)"
+    print(f"Price prediction source: {MODEL_SOURCE}")
+
+
+def predict_price_rupees(location, sqft, bhk, bathrooms):
+    if MODEL is None:
+        return round((sqft * 5500) + (bhk * 250000) + (bathrooms * 100000))
+    row = {col: 0 for col in FEATURES}
+    row["total_sqft"] = sqft
+    row["bath"] = bathrooms
+    row["bhk"] = bhk
+    if location in row:
+        row[location] = 1
+    elif "other" in row:
+        row["other"] = 1
+    price_lakhs = MODEL.predict(pd.DataFrame([row], columns=FEATURES))[0]
+    return round(max(price_lakhs, 0) * 100000)
+
+
+load_model()
 
 def get_db_connection():
     conn = sqlite3.connect(DB_NAME)
@@ -260,7 +355,8 @@ def price_predict():
         bhk = int(request.form.get('bhk', 2))
         bathrooms = int(request.form.get('bathrooms', 2))
 
-        estimated_val = round((sqft * 5500) + (bhk * 250000) + (bathrooms * 100000))
+        # Price now comes from the trained machine learning model
+        estimated_val = predict_price_rupees(location, sqft, bhk, bathrooms)
 
         prediction = {
             'location': location,
