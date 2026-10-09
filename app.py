@@ -15,12 +15,7 @@ ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "adminpassword123"
 
 # ------------------------------------------------------------------
-# MACHINE LEARNING MODEL
-# The model is loaded from model.pkl if that file exists. If it does
-# not exist, a Linear Regression model is trained here from
-# Bengaluru_House_Data.csv, using the same cleaning steps as
-# train_model.py. If both fail, the old formula is used so that the
-# website never crashes.
+# MACHINE LEARNING MODEL SETUP
 # ------------------------------------------------------------------
 MODEL = None
 FEATURES = None
@@ -106,6 +101,9 @@ def predict_price_rupees(location, sqft, bhk, bathrooms):
 
 load_model()
 
+# ------------------------------------------------------------------
+# DATABASE INITIALIZATION AND HELPER FUNCTIONS
+# ------------------------------------------------------------------
 def get_db_connection():
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
@@ -262,6 +260,9 @@ def log_event(user, action_route, details):
     conn.commit()
     conn.close()
 
+# ------------------------------------------------------------------
+# ROUTE HANDLERS
+# ------------------------------------------------------------------
 @app.route('/')
 def home():
     if 'user' in session:
@@ -335,8 +336,6 @@ def price_predict():
         "Banashankari", "Marathahalli", "Yelahanka", "Sarjapur Road"
     ]
 
-    # Show only the localities the model was trained on, so that every
-    # choice in the drop-down gives its own estimate.
     model_locations = sorted(
         c for c in (FEATURES or []) if c not in ("total_sqft", "bath", "bhk", "other")
     )
@@ -365,7 +364,6 @@ def price_predict():
         bhk = int(request.form.get('bhk', 2))
         bathrooms = int(request.form.get('bathrooms', 2))
 
-        # Price now comes from the trained machine learning model
         estimated_val = predict_price_rupees(location, sqft, bhk, bathrooms)
 
         prediction = {
@@ -385,6 +383,11 @@ def price_predict():
 def add_to_portfolio():
     if 'user' not in session:
         return redirect(url_for('login'))
+
+    # STRICT BACKEND SECURITY: RESTRICT SAVE ACTION TO ADMIN ONLY
+    if session.get('role') != 'admin':
+        flash("Unauthorized action! Only administrators can manage the company portfolio.", "danger")
+        return redirect(url_for('price_predict'))
 
     username = session.get('user', 'admin')
     location = request.form.get('location')
@@ -410,6 +413,11 @@ def add_to_portfolio():
 def portfolio():
     if 'user' not in session:
         return redirect(url_for('login'))
+
+    # STRICT BACKEND SECURITY: RESTRICT PORTFOLIO ACCESS TO ADMIN ONLY
+    if session.get('role') != 'admin':
+        flash("Access Denied. Portfolio management is restricted to Administrators.", "danger")
+        return redirect(url_for('price_predict'))
 
     username = session.get('user', 'admin')
     conn = get_db_connection()
